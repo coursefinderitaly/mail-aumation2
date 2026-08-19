@@ -732,7 +732,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                         <button
                           onClick={handleEngineToggle}
                           disabled={isProcessing}
-                          title="Switch analysis between Gemini AI & Local Rules Engine"
+                          title="Switch analysis between Groq AI & Local Rules Engine"
                           className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm border ${
                             activeEngineMode === 'AI'
                               ? 'dark:bg-indigo-500/20 bg-indigo-100 text-indigo-700 dark:text-indigo-300 border-indigo-500/30'
@@ -753,17 +753,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                     </div>
                   ) : crmData && crmData.studentData ? (
                     <div className="space-y-4 flex-1 flex flex-col min-h-0 relative z-10">
-                      {crmData.isAiUsed === false && crmData.reason && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-3 relative z-10 shadow-sm">
-                          <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                          </svg>
-                          <div>
-                            <h4 className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide">API Quota Exceeded / Fallback Triggered</h4>
-                            <p className="text-[11px] text-red-700/80 dark:text-red-300/80 mt-0.5">{crmData.reason}</p>
-                          </div>
-                        </div>
-                      )}
+
                       
                       {/* AI Profile Understanding & Logic Details Control Center */}
                       <div className="shrink-0 rounded-2xl p-4 md:p-5 bg-white/70 dark:bg-[#121216]/80 backdrop-blur-xl border border-gray-200/60 dark:border-white/[0.04] shadow-[0_4px_24px_rgb(0,0,0,0.02)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] relative overflow-hidden group">

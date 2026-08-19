@@ -9,10 +9,7 @@ export default function AiModelDashboard() {
   const [config, setConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [apiKeyInput, setApiKeyInput] = useState('');
   const [groqKeyInput, setGroqKeyInput] = useState('');
-  const [providerInput, setProviderInput] = useState('gemini');
-  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showGroqKey, setShowGroqKey] = useState(false);
   const [keySaveSuccess, setKeySaveSuccess] = useState(false);
   const [isTestingApi, setIsTestingApi] = useState(false);
@@ -39,9 +36,7 @@ export default function AiModelDashboard() {
       if (res.ok) {
         const data = await res.json();
         setConfig(data);
-        setApiKeyInput(data.apiKey || '');
         setGroqKeyInput(data.groqApiKey || '');
-        setProviderInput(data.aiProvider || 'gemini');
       }
     } catch (err) {
       console.error('Failed to load AI configuration:', err);
@@ -80,9 +75,7 @@ export default function AiModelDashboard() {
   const handleSaveApiKey = async (e) => {
     e.preventDefault();
     await handleSaveConfig({ 
-      apiKey: apiKeyInput.trim(),
       groqApiKey: groqKeyInput.trim(),
-      aiProvider: providerInput
     });
     setKeySaveSuccess(true);
     setTimeout(() => {
@@ -91,13 +84,7 @@ export default function AiModelDashboard() {
     }, 1200);
   };
 
-  const activeProvider = config?.aiProvider || 'gemini';
-  const isApiConnected = Boolean(
-    config && (
-      (activeProvider === 'groq' && config.groqApiKey && config.groqApiKey.length > 5) ||
-      (activeProvider === 'gemini' && config.apiKey && config.apiKey.length > 5)
-    )
-  );
+  const isApiConnected = Boolean(config && config.groqApiKey && config.groqApiKey.length > 5);
 
   return (
     <div className="flex flex-col w-full h-full dark:bg-[#0a0a0d] bg-[#fbfaf6] text-slate-800 dark:text-slate-200 overflow-hidden select-none">
@@ -115,7 +102,7 @@ export default function AiModelDashboard() {
               <span>AI Model Control & Training Center</span>
             </h1>
             <p className="text-xs dark:text-neutral-400 text-slate-500">
-              Manage Gemini 2.5 Flash reasoning parameters, rulesets, and study abroad consultation workflows.
+              Manage Groq Llama-3.3 reasoning parameters, rulesets, and study abroad consultation workflows.
             </p>
           </div>
         </div>
@@ -131,7 +118,7 @@ export default function AiModelDashboard() {
           >
             <div className={`w-2.5 h-2.5 rounded-full ${isApiConnected ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 'bg-amber-500 animate-pulse'}`}></div>
             <span className="text-xs font-bold dark:text-white text-slate-800">
-              {isApiConnected ? `${activeProvider === 'groq' ? 'Groq AI Studio' : 'Google AI Studio'} Connected` : 'Configure AI Studio Keys'}
+              {isApiConnected ? 'Groq AI Studio Connected' : 'Configure AI Studio Keys'}
             </span>
             <svg className="w-3.5 h-3.5 dark:text-neutral-500 text-slate-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           </button>
@@ -142,7 +129,7 @@ export default function AiModelDashboard() {
               onClick={handleTestApiConnection}
               disabled={isTestingApi}
               className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl font-bold text-xs dark:bg-indigo-500/10 bg-indigo-50 dark:text-indigo-400 text-indigo-700 border dark:border-indigo-500/30 border-indigo-200 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
-              title="Test live connectivity and latency with Google Gemini AI Studio"
+              title="Test live connectivity and latency with Groq AI Studio"
             >
               {isTestingApi ? (
                 <>
@@ -181,7 +168,7 @@ export default function AiModelDashboard() {
           {/* Master Engine Selector / Toggle */}
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold uppercase tracking-widest dark:text-neutral-400 text-slate-500 mb-1.5 px-1">
-              Active Extraction & Chat Engine: <span className="dark:text-white text-slate-900 font-extrabold">{!config?.isAiEnabled ? 'Local Rules Heuristics' : (config?.aiProvider === 'groq' ? 'Groq Llama-3.3' : 'Google Gemini Flash')}</span>
+              Active Extraction & Chat Engine: <span className="dark:text-white text-slate-900 font-extrabold">{!config?.isAiEnabled ? 'Local Rules Heuristics' : 'Groq Llama-3.3'}</span>
             </span>
             <div className="flex items-center p-1 rounded-2xl dark:bg-[#16161c] bg-gray-100 border dark:border-white/10 border-gray-200 shadow-inner gap-1">
               <button
@@ -207,40 +194,19 @@ export default function AiModelDashboard() {
                 type="button"
                 onClick={async () => {
                   if (!config) return;
-                  const updated = { ...config, isAiEnabled: true, aiProvider: 'gemini' };
+                  const updated = { ...config, isAiEnabled: true };
                   setConfig(updated);
-                  await handleSaveConfig({ isAiEnabled: true, aiProvider: 'gemini' });
+                  await handleSaveConfig({ isAiEnabled: true });
                 }}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                  config?.isAiEnabled && (config?.aiProvider === 'gemini' || !config?.aiProvider)
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25 scale-[1.02]'
-                    : 'dark:text-neutral-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                }`}
-                title="Activate Google Gemini AI (gemini-flash-latest)"
-              >
-                <span>⚡ Gemini AI</span>
-                {config?.isAiEnabled && (config?.aiProvider === 'gemini' || !config?.aiProvider) && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!config) return;
-                  const updated = { ...config, isAiEnabled: true, aiProvider: 'groq' };
-                  setConfig(updated);
-                  await handleSaveConfig({ isAiEnabled: true, aiProvider: 'groq' });
-                }}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                  config?.isAiEnabled && config?.aiProvider === 'groq'
+                  config?.isAiEnabled
                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25 scale-[1.02]'
                     : 'dark:text-neutral-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
                 }`}
                 title="Activate Groq AI Studio (llama-3.3-70b-versatile)"
               >
                 <span>🚀 Groq AI</span>
-                {config?.isAiEnabled && config?.aiProvider === 'groq' && (
+                {config?.isAiEnabled && (
                   <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
                 )}
               </button>
@@ -349,76 +315,16 @@ export default function AiModelDashboard() {
             </div>
 
             <form onSubmit={handleSaveApiKey} className="space-y-6">
-              {/* Provider Selector Tabs */}
-              <div>
-                <label className="text-xs font-bold uppercase tracking-widest dark:text-neutral-400 text-slate-500 block mb-2.5">
-                  Select Active Cloud AI Engine
-                </label>
-                <div className="grid grid-cols-2 gap-3 p-1.5 rounded-2xl dark:bg-[#1a1a20] bg-gray-100 border dark:border-white/5 border-gray-200">
-                  <button
-                    type="button"
-                    onClick={() => setProviderInput('gemini')}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                      providerInput === 'gemini'
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]'
-                        : 'dark:text-neutral-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                    }`}
-                  >
-                    <span>⚡ Google Gemini AI</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProviderInput('groq')}
-                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                      providerInput === 'groq'
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]'
-                        : 'dark:text-neutral-400 text-slate-600 hover:dark:text-white hover:text-slate-900'
-                    }`}
-                  >
-                    <span>🚀 Groq AI (Llama 3 / Mixtral)</span>
-                  </button>
-                </div>
-              </div>
 
-              {/* Gemini API Key Field */}
-              <div className={`p-4 rounded-2xl border transition-all ${providerInput === 'gemini' ? 'dark:bg-indigo-500/5 bg-indigo-50/50 dark:border-indigo-500/40 border-indigo-200 shadow-xs' : 'dark:bg-[#1a1a20]/50 bg-gray-50/50 dark:border-white/5 border-gray-200 opacity-80'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-bold uppercase tracking-widest dark:text-neutral-300 text-slate-700 flex items-center gap-1.5">
-                    <span>⚡ Google Gemini Secret Key</span>
-                    {providerInput === 'gemini' && <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-extrabold lowercase">active</span>}
-                  </label>
-                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-xs text-indigo-400 hover:text-indigo-300 underline font-bold transition-colors">
-                    Get Gemini Key ↗
-                  </a>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showGeminiKey ? "text" : "password"}
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="AIzaSy... or AQ.Ab8..."
-                    className="w-full pl-4 pr-12 py-3 rounded-xl dark:bg-[#121216] bg-white dark:text-white text-slate-900 border dark:border-white/10 border-gray-300 focus:outline-none focus:border-indigo-500 text-sm font-mono shadow-inner transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGeminiKey(!showGeminiKey)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 dark:text-neutral-400 text-slate-500 hover:dark:text-white hover:text-slate-800 transition-colors p-1 text-base cursor-pointer select-none"
-                    title={showGeminiKey ? "Hide Secret Key" : "Show Full API Key"}
-                  >
-                    {showGeminiKey ? "🙈" : "👁️"}
-                  </button>
-                </div>
-                <p className="text-[11px] dark:text-neutral-400 text-slate-500 mt-2 leading-tight">
-                  Powers intelligent reasoning via <code className="text-indigo-400 font-mono">gemini-flash-latest</code>.
-                </p>
-              </div>
+
+
 
               {/* Groq API Key Field */}
-              <div className={`p-4 rounded-2xl border transition-all ${providerInput === 'groq' ? 'dark:bg-emerald-500/5 bg-emerald-50/50 dark:border-emerald-500/40 border-emerald-200 shadow-xs' : 'dark:bg-[#1a1a20]/50 bg-gray-50/50 dark:border-white/5 border-gray-200 opacity-80'}`}>
+              <div className={`p-4 rounded-2xl border transition-all dark:bg-emerald-500/5 bg-emerald-50/50 dark:border-emerald-500/40 border-emerald-200 shadow-xs`}>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold uppercase tracking-widest dark:text-neutral-300 text-slate-700 flex items-center gap-1.5">
                     <span>🚀 Groq API Secret Key</span>
-                    {providerInput === 'groq' && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-extrabold lowercase">active</span>}
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-extrabold lowercase">active</span>
                   </label>
                   <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-xs text-emerald-400 hover:text-emerald-300 underline font-bold transition-colors">
                     Get Groq Key ↗
