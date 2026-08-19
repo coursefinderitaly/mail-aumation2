@@ -781,6 +781,16 @@ app.post('/api/process-email', async (req, res) => {
     const path = require('path');
     fs.writeFileSync(path.join(__dirname, 'data.json'), JSON.stringify(db, null, 2), 'utf8');
 
+    if (!studentData) {
+      return res.json({ studentData: null, matchedCourses: [], isAiUsed, reason });
+    }
+    const matchedCoursesRes = await matchCourses(studentData, userInstruction);
+    const matchedCourses = matchedCoursesRes.matchedCourses || matchedCoursesRes || [];
+    const poiNotAvailable = matchedCoursesRes.poiNotAvailable || false;
+    const aiReasoning = matchedCoursesRes.aiReasoning || null;
+    const missing11thScore = matchedCoursesRes.missing11thScore || false;
+    const isNoCourseOptionsForPoi = matchedCoursesRes.isNoCourseOptionsForPoi || false;
+
     // Auto-apply profile labels to Gmail thread if connected
     const targetThreadId = req.body.threadId || req.body.emailId;
     if (targetThreadId && db.tokens && matchedCoursesRes.profileLabels && matchedCoursesRes.profileLabels.length > 0) {
