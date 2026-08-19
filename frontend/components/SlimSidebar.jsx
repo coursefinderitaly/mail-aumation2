@@ -71,6 +71,16 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
   };
 
   const handleUpdateLabel = async (id, updates) => {
+    // Optimistic UI Update
+    const originalLabels = [...userLabels];
+    setUserLabels(userLabels.map(l => l.id === id ? { ...l, ...updates } : l));
+    
+    // Close the settings dropdown immediately if it's just a color or visibility change
+    if (updates.color !== undefined || updates.labelListVisibility || updates.messageListVisibility) {
+      // Keep dropdown open so they can see the change, it updates instantly now!
+      // Actually, if we want it to close we could do setActiveSettingsLabel(null);
+    }
+
     try {
       const res = await fetch(`/api/labels/${id}`, {
         method: 'PUT',
@@ -79,11 +89,16 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
       });
       const data = await res.json();
       if (data.id) {
-        setUserLabels(userLabels.map(l => l.id === id ? data : l));
-        setActiveSettingsLabel(null);
+        // Update with the actual data from server just in case
+        setUserLabels(prev => prev.map(l => l.id === id ? data : l));
+      } else {
+        // Revert on failure
+        setUserLabels(originalLabels);
       }
     } catch (e) {
       console.error(e);
+      // Revert on failure
+      setUserLabels(originalLabels);
     }
   };
 
@@ -348,7 +363,7 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
 
       {activeSettingsLabel && (
         <LabelSettingsDropdown
-          label={activeSettingsLabel.label}
+          label={userLabels.find(l => l.id === activeSettingsLabel.label.id) || activeSettingsLabel.label}
           anchorEl={activeSettingsLabel.anchorEl}
           onClose={() => setActiveSettingsLabel(null)}
           onUpdate={handleUpdateLabel}
