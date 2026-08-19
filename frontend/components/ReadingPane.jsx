@@ -1991,98 +1991,98 @@ function generateTemplate(crmData, studentName, isPursuing = false, isGap = fals
 
   const coursesHtml = matchedCourses.map((c, i) => `
     <tr style="text-align: center; border-bottom: 1px solid #ccc;">
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${i + 1}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: left; color: #111;">${c.universityName || c.university || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.duration || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: left; color: #0056b3;">${c.programName || c.name || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${c.percentage || c.score || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.languageRequirement || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.otherReq || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${c.admissionTest || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.applicationFees || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.tentativeMonths || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${i + 1}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #111;">${c.universityName || c.university || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.duration || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #0056b3;">${c.programName || c.name || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.percentage || c.score || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.languageRequirement || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.otherReq || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.admissionTest || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.applicationFees || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.tentativeMonths || '-'}</td>
     </tr>
   `).join('');
 
   return `
-    <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.7; font-size: 16px; max-width: 100%; margin: 0 auto; padding: 8px;">
-      <p style="font-size: 18px; font-weight: bold; margin: 0 0 18px 0;">Greetings!</p>
+    <div style="font-family: Arial, sans-serif; color: #111; line-height: 1.5; font-size: 14px; max-width: 100%; margin: 0 auto; padding: 4px;">
+      <p style="font-size: 15px; font-weight: bold; margin: 0 0 12px 0;">Greetings!</p>
 
-      <p style="margin: 16px 0;">
-        <span style="background-color: #fce4d6; padding: 6px 14px; font-weight: bold; font-size: 16px; color: #000; display: inline-block; border-radius: 4px;">For ${intake} Intake</span>
+      <p style="margin: 10px 0;">
+        <span style="background-color: #fce4d6; padding: 4px 10px; font-weight: bold; font-size: 13.5px; color: #000; display: inline-block; border-radius: 4px;">For ${intake} Intake</span>
       </p>
 
       ${isPursuing ? `
-      <p style="margin: 16px 0;">
-        <span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 6px 14px; font-size: 15.5px; display: inline-block; border-radius: 4px; line-height: 1.5;">
+      <p style="margin: 10px 0;">
+        <span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 4px 10px; font-size: 13.5px; display: inline-block; border-radius: 4px; line-height: 1.4;">
           ${isMaster ? 'NEED PROVISIONAL DEGREE / FINAL TRANSCRIPTS BY JUNE 2027' : 'Course options are shared only on the basis of predicted marks above 70% also the 12th result will be required till 20th of June 2027.'}
         </span>
       </p>
       ` : ''}
 
-      <p style="margin: 16px 0;">
-        <span style="background-color: #00FF00; padding: 6px 14px; font-weight: bold; color: #000; display: inline-block; border-radius: 4px; font-size: 16px;">SAFE TO APPLY</span> <span style="font-weight: bold; color: #000; font-size: 16px;"> - Only if s/he clears the admission test!!</span>
+      <p style="margin: 10px 0;">
+        <span style="background-color: #00FF00; padding: 4px 10px; font-weight: bold; color: #000; display: inline-block; border-radius: 4px; font-size: 13.5px;">SAFE TO APPLY</span> <span style="font-weight: bold; color: #000; font-size: 13.5px;"> - Only if s/he clears the admission test!!</span>
       </p>
 
       ${isGap ? `
-      <p style="margin: 16px 0;">
-        <span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 6px 14px; font-size: 16px; display: inline-block; border-radius: 4px;">NEED TO JUSTIFY GAP WITH PROPER CERTIFICATES</span>
+      <p style="margin: 10px 0;">
+        <span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 4px 10px; font-size: 13.5px; display: inline-block; border-radius: 4px;">NEED TO JUSTIFY GAP WITH PROPER CERTIFICATES</span>
       </p>
       ` : ''}
 
-      <p style="font-weight: bold; font-size: 16px; color: #000; margin: 20px 0; line-height: 1.6;">
+      <p style="font-weight: bold; font-size: 13.5px; color: #000; margin: 12px 0; line-height: 1.5;">
         Before starting the process for ${intake} - we will evaluate the profile again as per updated requirements and then finalize the options!!
       </p>
 
-      <p style="color: #0000FF; font-weight: bold; font-size: 16px; margin: 20px 0; line-height: 1.6;">
+      <p style="color: #0000FF; font-weight: bold; font-size: 13.5px; margin: 12px 0; line-height: 1.5;">
         I have added overall possible course options based on ${isMaster ? "Bachelor's subjects & preferences" : "12th subjects & preferences"}, that are available in Italian public universities with 100% Scholarship.
       </p>
 
-      <p style="font-weight: bold; font-size: 15.5px; color: #000; margin: 18px 0; line-height: 1.6;">
+      <p style="font-weight: bold; font-size: 13.5px; color: #000; margin: 12px 0; line-height: 1.5;">
         We will share the information regarding updates (If Any). Also, throughout the process, if we find any more options, we will update the same to you.
       </p>
 
-      <p style="margin: 18px 0;">
-        <span style="background-color: #fde8d7; padding: 6px 14px; font-weight: bold; font-size: 15px; color: #000; display: inline-block; border-radius: 4px; line-height: 1.5;">
+      <p style="margin: 12px 0;">
+        <span style="background-color: #fde8d7; padding: 4px 10px; font-weight: bold; font-size: 13px; color: #000; display: inline-block; border-radius: 4px; line-height: 1.4;">
           Note: It is essential to book an exam prior to the application submission. The score card will be required when submitting the applications.
         </span>
       </p>
 
       <!-- Dynamic Current Year Notice (Included for all non-low-profile emails) -->
-      <p style="margin: 18px 0;">
-        <span style="background-color: #e0e7ff; color: #1e1b4b; padding: 7px 14px; font-weight: bold; font-size: 15px; border-left: 4px solid #4f46e5; display: inline-block; border-radius: 2px; line-height: 1.5;">
+      <p style="margin: 12px 0;">
+        <span style="background-color: #e0e7ff; color: #1e1b4b; padding: 5px 10px; font-weight: bold; font-size: 13px; border-left: 4px solid #4f46e5; display: inline-block; border-radius: 2px; line-height: 1.4;">
           Note: These details are as per the current year ${currentYear} guidelines. If any updates or changes occur for ${intake} intake, we will update you accordingly.
         </span>
       </p>
 
       ${matchedCourses.length > 0 ? `
-      <div style="margin-top: 24px; overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 14.5px; margin-top: 16px; border: 1px solid #ccc;">
+      <div style="margin-top: 16px; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; border: 1px solid #ccc;">
           <thead>
             <tr style="background-color: #FCE4D6; color: #111;">
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center; width: 55px;">S.No</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: left;">University Name</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center; width: 90px;">Duration</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: left;">Program Name</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Percentage</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Lang. Req.</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Other Req.</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Admission Test/Interview</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Application Fees</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Tentative Months (Only Opening)</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center; width: 45px;">S.No</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">University Name</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center; width: 75px;">Duration</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">Program Name</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Percentage</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Lang. Req.</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Other Req.</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Admission Test/Interview</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Application Fees</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Tentative Months (Only Opening)</th>
             </tr>
             <!-- Blue Table Remarks Container Header (Per Agency Screenshots) -->
             <tr>
-              <td colspan="10" style="background-color: #dbeafe; padding: 16px 22px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.75; font-size: 15px;">
-                <div style="font-weight: bold; font-size: 16.5px; margin-bottom: 8px; color: #1d4ed8;">REMARKS: Details for ${intake} Intake</div>
-                <div style="font-weight: 600; margin: 3px 0;">1. We will evaluate the profile again before starting the admission application submission</div>
-                <div style="font-weight: 600; margin: 3px 0;">2. Admission will depend on admission test: CEnT-S, SAT (1300/1600), or respective university test</div>
-                <div style="font-weight: 600; margin: 3px 0;">3. IELTS: Overall 6 band (B2 Level)</div>
-                <div style="font-weight: 600; margin: 3px 0;">4. Application will begin only after completion of all the required documents.</div>
-                <div style="margin-top: 6px;"><span style="background-color: #FFFF00; color: #000; font-weight: bold; padding: 3px 8px; font-size: 14.5px; display: inline-block; border-radius: 3px;">5. CEnT-S registration is open now - students can book the test for timely results and applications</span></div>
-                <div style="margin-top: 6px; font-weight: bold; font-size: 15.5px; color: #1d4ed8;">We can start admission applications for ${intake} by November ${previousYear}!!</div>
-                <div style="margin-top: 8px;"><span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 4px 10px; font-size: 14.5px; display: inline-block; border-radius: 3px;">${categoryBannerText}</span></div>
-                <div style="margin-top: 6px; color: #dc2626; font-weight: bold; font-size: 15px;">We do not proceed with University of Venice - as it has some scholarship issues</div>
+              <td colspan="10" style="background-color: #dbeafe; padding: 10px 14px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.5; font-size: 13px;">
+                <div style="font-weight: bold; font-size: 14.5px; margin-bottom: 6px; color: #1d4ed8;">REMARKS: Details for ${intake} Intake</div>
+                <div style="font-weight: 600; margin: 2px 0;">1. We will evaluate the profile again before starting the admission application submission</div>
+                <div style="font-weight: 600; margin: 2px 0;">2. Admission will depend on admission test: CEnT-S, SAT (1300/1600), or respective university test</div>
+                <div style="font-weight: 600; margin: 2px 0;">3. IELTS: Overall 6 band (B2 Level)</div>
+                <div style="font-weight: 600; margin: 2px 0;">4. Application will begin only after completion of all the required documents.</div>
+                <div style="margin-top: 4px;"><span style="background-color: #FFFF00; color: #000; font-weight: bold; padding: 2px 6px; font-size: 12.5px; display: inline-block; border-radius: 3px;">5. CEnT-S registration is open now - students can book the test for timely results and applications</span></div>
+                <div style="margin-top: 4px; font-weight: bold; font-size: 13.5px; color: #1d4ed8;">We can start admission applications for ${intake} by November ${previousYear}!!</div>
+                <div style="margin-top: 6px;"><span style="background-color: #FFFF00; color: #FF0000; font-weight: bold; padding: 3px 8px; font-size: 12.5px; display: inline-block; border-radius: 3px;">${categoryBannerText}</span></div>
+                <div style="margin-top: 4px; color: #dc2626; font-weight: bold; font-size: 13px;">We do not proceed with University of Venice - as it has some scholarship issues</div>
               </td>
             </tr>
           </thead>
