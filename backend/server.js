@@ -406,7 +406,7 @@ app.get('/api/emails', async (req, res) => {
   }
   
   try {
-    const response = await gmail.users.messages.list(listParams);
+    const response = await gmail.users.threads.list(listParams);
     
     // Fetch all label definitions from Gmail to translate labelIds to names
     let labelMap = {};
@@ -417,55 +417,111 @@ app.get('/api/emails', async (req, res) => {
       });
     } catch(e) { console.error('Error fetching labels list:', e.message); }
 
-    let messages = [];
-    if (response.data.messages) {
-      const messagePromises = response.data.messages.map(async (msg) => {
-        const details = await gmail.users.messages.get({ userId: 'me', id: msg.id });
-        const headers = details.data.payload.headers;
+    let threadsData = [];
+    if (response.data.threads) {
+      const threadPromises = response.data.threads.map(async (threadObj) => {
+        const details = await gmail.users.threads.get({ userId: 'me', id: threadObj.id });
+        const messages = details.data.messages;
         
-        const bodyContent = getEmailBody(details.data.payload) || details.data.snippet;
-        const labelIds = details.data.labelIds || [];
-        const labelNames = labelIds.map(id => labelMap[id] || id);
+        if (!messages || messages.length === 0) return null;
+        
+        const firstMsg = messages[0];
+        const lastMsg = messages[messages.length - 1];
+        
+        const firstHeaders = firstMsg.payload.headers;
+        const lastHeaders = lastMsg.payload.headers;
+        
+        const subject = firstHeaders.find(h => h.name === 'Subject')?.value || 'No Subject';
+        
+        // Collect all unique senders for the inbox preview
+        const allFroms = messages.map(m => {
+          const f = m.payload.headers.find(h => h.name === 'From')?.value || 'Unknown';
+          const match = f.match(/^([^<]+)/);
+          return match ? match[1].replace(/"/g, '').trim() : f;
+        });
+        const uniqueFroms = [...new Set(allFroms)];
+        const fromDisplay = uniqueFroms.length > 2 ? `${uniqueFroms[0]}, ... (${messages.length})` : uniqueFroms.join(', ');
 
-        // Check if course option is sended / auto-replied
+        const date = lastHeaders.find(h => h.name === 'Date')?.value;
+        const to = lastHeaders.find(h => h.name === 'To')?.value || '';
+        const messageId = lastHeaders.find(h => h?.name?.toLowerCase() === 'message-id')?.value || '';
+        const references = lastHeaders.find(h => h?.name?.toLowerCase() === 'references')?.value || '';
+
+        let allAttachments = [];
+        messages.forEach(m => {
+          const extracted = extractAttachments(m.payload);
+          extracted.forEach(att => {
+            att.googleMessageId = m.id; // Required for downloading attachment later
+          });
+          allAttachments = allAttachments.concat(extracted);
+        });
+
+        const bodyContent = messages.map((m, index) => {
+          const mHeaders = m.payload.headers;
+          const mFrom = mHeaders.find(h => h.name === 'From')?.value || 'Unknown';
+          const mDate = mHeaders.find(h => h.name === 'Date')?.value;
+          const mBody = getEmailBody(m.payload) || m.snippet;
+          
+          return `<div style="border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: ${index === messages.length - 1 ? '0' : '24px'}; overflow: hidden; font-family: sans-serif; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="background: #f9fafb; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+              <strong style="color: #111827;">${mFrom.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong> 
+              <span style="color: #6b7280; font-size: 11px;">${new Date(mDate).toLocaleString()}</span>
+            </div>
+            <div style="padding: 16px; font-size: 14px; background: white; color: #1f2937; line-height: 1.5; overflow-x: auto;">
+              ${mBody}
+            </div>
+          </div>`;
+        }).join('');
+        
+        let labelIds = [];
+        messages.forEach(m => {
+          if (m.labelIds) {
+            m.labelIds.forEach(id => {
+              if (!labelIds.includes(id)) labelIds.push(id);
+            });
+          }
+        });
+        const labelNames = labelIds.map(id => labelMap[id] || id);
+        
         const isCourseOptionSent = labelNames.some(name => {
           const n = name.toLowerCase();
           return n.includes('course option sended') || n.includes('course option sent') || n.includes('auto-replied') || n.includes('auto_replied') || n.includes('auto replied') || n === 'sent';
         });
 
-        // Check if email has student profile data (analysed & ready to send)
-        const textToAnalyze = (bodyContent || details.data.snippet || '').toLowerCase();
+        const textToAnalyze = messages.map(m => (getEmailBody(m.payload) || m.snippet || '').toLowerCase()).join(' ');
         const hasStudentData = textToAnalyze.includes('learner name') || textToAnalyze.includes('program of interest') || textToAnalyze.includes('class 12') || textToAnalyze.includes('bachelor') || textToAnalyze.includes('graduation') || textToAnalyze.includes('bca') || textToAnalyze.includes('btech') || textToAnalyze.includes('b.tech') || textToAnalyze.includes('bsc') || textToAnalyze.includes('b.sc') || textToAnalyze.includes('bcom') || textToAnalyze.includes('bba') || textToAnalyze.includes('intake pitched') || textToAnalyze.includes('age ') || textToAnalyze.includes('work experience') || textToAnalyze.includes('master');
 
         const isNotAnalysed = !hasStudentData || labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
         const isReadyToSend = hasStudentData && !isCourseOptionSent && !labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
-        const attachments = extractAttachments(details.data.payload);
 
         return {
-          id: msg.id,
-          threadId: msg.threadId,
-          snippet: details.data.snippet,
+          id: threadObj.id, // Using thread ID instead of message ID!
+          threadId: threadObj.id,
+          snippet: lastMsg.snippet,
           body: bodyContent,
-          subject: headers.find(h => h.name === 'Subject')?.value || 'No Subject',
-          from: headers.find(h => h.name === 'From')?.value || 'Unknown',
-          to: headers.find(h => h.name === 'To')?.value || '',
-          date: headers.find(h => h.name === 'Date')?.value,
-          labelIds: details.data.labelIds || [],
+          subject: subject,
+          from: fromDisplay,
+          rawFrom: lastMsg.payload.headers.find(h => h.name === 'From')?.value || '', // Store the actual raw From header for replies
+          to: to,
+          date: date,
+          labelIds: labelIds,
           labelNames,
-          attachments,
-          hasAttachments: attachments.length > 0,
+          attachments: allAttachments,
+          hasAttachments: allAttachments.length > 0,
           isCourseOptionSent,
           isReadyToSend,
           isNotSended: !isCourseOptionSent,
           isNotAnalysed,
-          messageId: headers.find(h => h?.name?.toLowerCase() === 'message-id')?.value || '',
-          references: headers.find(h => h?.name?.toLowerCase() === 'references')?.value || ''
+          messageId,
+          references,
+          messageCount: messages.length
         };
       });
       
-      messages = await Promise.all(messagePromises);
+      const results = await Promise.all(threadPromises);
+      threadsData = results.filter(Boolean);
     }
-    res.json(messages);
+    res.json(threadsData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -610,29 +666,22 @@ app.delete('/api/labels/:id', async (req, res) => {
 
 // API to Modify Email Labels (Star, Trash, Spam, Mark Read)
 app.post('/api/emails/:id/modify', async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params; // 'id' is now the threadId since our UI is thread-based!
   const { addLabelIds, removeLabelIds } = req.body;
   if (!db.tokens) return res.status(401).json({ error: 'Not connected' });
   oauth2Client.setCredentials(db.tokens);
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   try {
-    const msg = await gmail.users.messages.get({ userId: 'me', id });
-    const threadId = msg.data.threadId;
-    
     let response;
-    // Gmail API requires using trash/untrash methods instead of modifying the TRASH label directly
     if (addLabelIds && addLabelIds.includes('TRASH')) {
-      response = await gmail.users.threads.trash({ userId: 'me', id: threadId });
+      response = await gmail.users.threads.trash({ userId: 'me', id });
     } else if (removeLabelIds && removeLabelIds.includes('TRASH')) {
-      response = await gmail.users.threads.untrash({ userId: 'me', id: threadId });
+      response = await gmail.users.threads.untrash({ userId: 'me', id });
     } else {
       response = await gmail.users.threads.modify({
         userId: 'me',
-        id: threadId,
-        requestBody: {
-          addLabelIds: addLabelIds || [],
-          removeLabelIds: removeLabelIds || []
-        }
+        id,
+        requestBody: { addLabelIds, removeLabelIds }
       });
     }
     res.json(response.data);
@@ -679,16 +728,20 @@ app.post('/api/process-email', async (req, res) => {
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
 
   try {
-    const response = await gmail.users.messages.get({ userId: 'me', id: emailId });
+    // We are now receiving a threadId since the UI is thread-based
+    const response = await gmail.users.threads.get({ userId: 'me', id: emailId });
 
-    const rawContent = getEmailBody(response.data.payload) || '';
-    const plainText = extractText(response.data.payload) || response.data.snippet || '';
+    const messages = response.data.messages;
+    const rawContent = messages.map(m => getEmailBody(m.payload) || '').join('\n');
+    const plainText = messages.map(m => extractText(m.payload) || m.snippet || '').join('\n');
+    
     const cleanFromHtml = rawContent.replace(/<\/td>|<\/th>/gi, '\t').replace(/<\/tr>|<\/div>|<\/p>|<br\s*\/?>/gi, '\n').replace(/<[^>]*>?/gm, ' ').replace(/&nbsp;/g, ' ');
     const fullText = (cleanFromHtml + '\n' + plainText).trim()
       .replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
     let fallbackName = 'Student';
-    const fromHeader = response.data.payload?.headers?.find(h => h.name === 'From')?.value || '';
+    // Use the first message's from header for fallback name
+    const fromHeader = messages[0].payload?.headers?.find(h => h.name === 'From')?.value || '';
     const nameMatch = fromHeader.match(/^"([^"]+)"/) || fromHeader.match(/^([^<]+)/);
     if (nameMatch && nameMatch[1].trim()) fallbackName = nameMatch[1].trim();
 

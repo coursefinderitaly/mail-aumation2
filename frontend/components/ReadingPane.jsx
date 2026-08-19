@@ -323,7 +323,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
     const quoteHtml = `<br><br><div class="gmail_quote" dir="auto">On ${new Date(email.date).toLocaleString()}, ${email.from} wrote:<br><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left-width:1px;border-left-style:solid;border-left-color:rgb(204,204,204);padding-left:1ex">${email.body}</blockquote></div>`;
     
     onPreviewDraft({
-      to: email.from,
+      to: email.rawFrom || email.from,
       subject: `Re: ${email.subject.replace(/^Re:\s*/i, '')}`,
       htmlBody: baseHtmlBody + quoteHtml,
       threadId: email.threadId,
@@ -342,7 +342,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: email.from,
+          to: email.rawFrom || email.from,
           subject: `Re: ${email.subject}`,
           htmlBody,
           threadId: email.threadId
