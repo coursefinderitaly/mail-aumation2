@@ -134,6 +134,7 @@ app.get('/auth/google', (req, res) => {
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/gmail.modify',
+      'https://www.googleapis.com/auth/gmail.labels',
       'https://www.googleapis.com/auth/userinfo.profile'
     ]
   });
@@ -537,7 +538,7 @@ app.get('/api/labels', async (req, res) => {
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   try {
     const response = await gmail.users.labels.list({ userId: 'me' });
-    const userLabels = (response.data.labels || []).filter(l => l.type === 'user');
+    const userLabels = (response.data.labels || []).filter(l => l.type && l.type.toLowerCase() === 'user');
     res.json(userLabels);
   } catch (e) {
     res.status(500).json({ error: e.message });

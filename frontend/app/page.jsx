@@ -10,6 +10,7 @@ import ComposeModal from '../components/ComposeModal';
 import AiModelDashboard from '../components/ai/AiModelDashboard';
 import CoursesExcelDashboard from '../components/CoursesExcelDashboard';
 import MailFormatsDashboard from '../components/MailFormatsDashboard';
+import ApiUsageWidget from '../components/ApiUsageWidget';
 
 export default function Page() {
   const [isConnected, setIsConnected] = useState(false);
@@ -394,6 +395,7 @@ export default function Page() {
       style={{ height: '111.2vh' }}
       className={`flex w-full px-6 py-4 font-sans overflow-hidden antialiased selection:bg-indigo-500/30 dark:bg-[#020202] bg-[#f0eee9] dark:text-slate-200 text-slate-800`}
     >
+      <ApiUsageWidget />
       <div className="flex w-full h-full rounded-3xl overflow-hidden shadow-2xl dark:shadow-black/50 border dark:border-white/5 border-gray-200 dark:bg-[#0a0a0a] bg-white relative">
         {/* Sidebar fixed-width toggle wrapper */}
         <div className={`${isSidebarCollapsed ? 'w-[70px]' : 'w-[240px]'} shrink-0 transition-all duration-300 ease-in-out h-full z-10 relative`}>
