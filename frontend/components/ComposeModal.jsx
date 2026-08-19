@@ -179,6 +179,14 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
     }
   };
 
+  const handleFormat = (command, value = null) => {
+    document.execCommand(command, false, value);
+    if (editableRef.current) {
+      editableRef.current.focus();
+      currentHtmlRef.current = editableRef.current.innerHTML;
+    }
+  };
+
   const handleRemoveCourse = (courseId) => {
     if (!courseId) return;
     const newCourses = selectedCourses.filter(sc => String(sc.id || sc.universityName) !== String(courseId));
@@ -456,7 +464,54 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                         <span className="text-xs text-indigo-500 dark:text-indigo-400 font-extrabold flex items-center gap-2">
                           <span>✏️ FULL LIVE PREVIEW & DIRECT EDITOR</span>
                           <span className="px-2 py-0.5 rounded-md text-[10px] bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 font-bold uppercase tracking-wide">Live Mode</span>
-                          <div className="flex items-center space-x-1 ml-4 bg-gray-100 dark:bg-[#1a1a1a] rounded-lg px-2 py-0.5 border dark:border-white/10 border-gray-200">
+                          
+                          {/* Rich Text Editor Toolbar */}
+                          <div className="flex items-center space-x-1.5 ml-4 bg-gray-100 dark:bg-[#1a1a1a] rounded-lg px-2.5 py-1 border dark:border-white/10 border-gray-200 shadow-sm">
+                            <button onClick={() => handleFormat('bold')} className="w-6 h-6 flex items-center justify-center font-black text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Bold">B</button>
+                            <button onClick={() => handleFormat('italic')} className="w-6 h-6 flex items-center justify-center font-bold italic text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Italic">I</button>
+                            <button onClick={() => handleFormat('underline')} className="w-6 h-6 flex items-center justify-center font-bold underline text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Underline">U</button>
+                            
+                            <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
+                            
+                            <select onChange={(e) => handleFormat('fontSize', e.target.value)} defaultValue="3" className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-300 outline-none cursor-pointer px-1 py-0.5 rounded hover:bg-gray-200 dark:hover:bg-neutral-700" title="Font Size">
+                              <option value="1" className="text-black dark:text-white">Tiny</option>
+                              <option value="2" className="text-black dark:text-white">Small</option>
+                              <option value="3" className="text-black dark:text-white">Normal</option>
+                              <option value="4" className="text-black dark:text-white">Large</option>
+                              <option value="5" className="text-black dark:text-white">Huge</option>
+                            </select>
+
+                            <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
+
+                            <button onClick={() => handleFormat('justifyLeft')} className="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Align Left">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h10M4 18h16" /></svg>
+                            </button>
+                            <button onClick={() => handleFormat('justifyCenter')} className="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Align Center">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M7 12h10M4 18h16" /></svg>
+                            </button>
+                            <button onClick={() => handleFormat('justifyRight')} className="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded cursor-pointer transition-colors" title="Align Right">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M10 12h10M4 18h16" /></svg>
+                            </button>
+                            
+                            <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
+                            
+                            <div className="flex items-center gap-1" title="Text Color">
+                              <span className="text-[10px] font-bold text-slate-500">A</span>
+                              <input type="color" onChange={(e) => handleFormat('foreColor', e.target.value)} className="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent" />
+                            </div>
+                            <div className="flex items-center gap-1" title="Highlight Color">
+                              <span className="text-[10px] font-bold text-slate-500 bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">bg</span>
+                              <input type="color" onChange={(e) => handleFormat('hiliteColor', e.target.value)} className="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent" />
+                            </div>
+                            
+                            <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
+                            
+                            <button onClick={() => handleFormat('removeFormat')} className="w-6 h-6 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded cursor-pointer transition-colors" title="Clear Formatting">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 14l9-5-9-5-9 5 9 5z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                            </button>
+                          </div>
+
+                          <div className="flex items-center space-x-1 ml-2 bg-gray-100 dark:bg-[#1a1a1a] rounded-lg px-2 py-0.5 border dark:border-white/10 border-gray-200 shadow-sm">
                             <button onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.1))} className="text-base hover:text-indigo-500 w-5 h-5 flex items-center justify-center cursor-pointer font-black" title="Zoom Out">-</button>
                             <span className="text-[10px] font-bold w-9 text-center text-slate-700 dark:text-slate-300">{Math.round(zoomLevel * 100)}%</span>
                             <button onClick={() => setZoomLevel(z => Math.min(2, z + 0.1))} className="text-base hover:text-indigo-500 w-5 h-5 flex items-center justify-center cursor-pointer font-black" title="Zoom In">+</button>
