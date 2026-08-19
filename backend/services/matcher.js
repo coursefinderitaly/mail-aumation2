@@ -435,7 +435,7 @@ function scoreCourse(course, studentProfile) {
  *   Stage 3: backgroundField compatibility (Bachelor degree / stream alignment)
  *   Stage 4: Program of Interest match (CS/AI/ML, Data Science, etc.)
  */
-async function matchCourses(studentData, userInstruction = '') {
+async function matchCourses(studentData, userInstruction = '', customFilters = null) {
   let {
     programOfInterest = '',
     intakePitched = '',
@@ -557,7 +557,6 @@ async function matchCourses(studentData, userInstruction = '') {
   // 2nd Label: Option sended status ('Ai- option sended 2026')
   profileLabels.push(`Ai- option sended ${yearStr}`);
 
-  // 3rd Label: Intake month ('Ai-September intake', etc.)
   const monthMatch = session.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b/i);
   let monthStr = 'September';
   if (monthMatch) {
@@ -575,7 +574,7 @@ async function matchCourses(studentData, userInstruction = '') {
     else if (rawM.startsWith('nov')) monthStr = 'November';
     else if (rawM.startsWith('dec')) monthStr = 'December';
   }
-  profileLabels.push(`Ai-${monthStr} intake`);
+  profileLabels.push(`Ai-${monthStr} ${yearStr} intake`);
 
   // 4th Label: Low Profile ('Ai-low profile' for percentage < 65%)
   const effectivePerc = getEffectivePercentage(studentScorePerc);
@@ -601,17 +600,66 @@ async function matchCourses(studentData, userInstruction = '') {
     bachelorDegree, bachelorProgram, bachelorDuration
   };
 
-  // ── 6. Apply Scoring to All Courses ──
-  const scoredCourses = db.courses.map(course => ({
-    course,
-    score: scoreCourse(course, studentProfile)
-  }));
+  // ── 6. Apply Custom Filters or Default Scoring ──
+  let matchedCourses = [];
+  if (customFilters && customFilters.length > 0) {
+    let result = [...db.courses];
+    customFilters.forEach(filter => {
+      if (filter.status !== 'ACTIVE') return;
+      const cols = filter.columnName.split(',').map(c => c.trim());
+      const rawVal = (filter.exactKeyword || '').toLowerCase().replace(/['"]/g, '');
+      if (!rawVal || rawVal.includes('any background') || rawVal.includes('no cutoff') || rawVal.includes('general')) return;
 
-  // ── 7. Filter: keep only positively scored, sort by relevance ──
-  let matchedCourses = scoredCourses
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(item => item.course);
+      result = result.filter(c => {
+        if (filter.columnName === 'percentage') {
+          const numMatch = rawVal.match(/(\d+(\.\d+)?)/);
+          if (numMatch) {
+            let num = parseFloat(numMatch[1]);
+            if (num > 1) num = num / 100;
+            let cVal = parseFloat(c.percentage) || 0;
+            if (cVal > 1) cVal = cVal / 100;
+            return cVal <= num;
+          }
+          return true;
+        }
+
+        if (filter.columnName === 'programLevel' || filter.columnName === 'category') {
+          const cLvl = (c.programLevel || c.category || '').toLowerCase();
+          const parts = rawVal.split(/,|\band\b|&|\|/).map(p => p.trim()).filter(Boolean);
+          if (parts.length > 0) {
+            return parts.some(p => {
+              if (p.includes('master')) return cLvl.includes('master');
+              if (p.includes('bachelor')) return !cLvl.includes('master');
+              return cLvl.includes(p);
+            });
+          }
+          if (rawVal.includes('master')) return cLvl.includes('master');
+          if (rawVal.includes('bachelor')) return !cLvl.includes('master');
+          return cLvl.includes(rawVal);
+        }
+
+        return cols.some(col => {
+          const cVal = String(c[col] || '').toLowerCase();
+          const parts = rawVal.split(/,|\band\b|&|\|/).map(p => p.trim()).filter(Boolean);
+          if (parts.length > 0) {
+            return parts.some(p => cVal.includes(p) || p.includes(cVal));
+          }
+          return cVal.includes(rawVal) || rawVal.includes(cVal);
+        });
+      });
+    });
+    matchedCourses = result;
+  } else {
+    const scoredCourses = db.courses.map(course => ({
+      course,
+      score: scoreCourse(course, studentProfile)
+    }));
+
+    matchedCourses = scoredCourses
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.course);
+  }
 
   let poiNotAvailable = false;
   let isNoCourseOptionsForPoi = false;
@@ -690,7 +738,7 @@ async function matchCourses(studentData, userInstruction = '') {
     ? `${bachelorDegree}${bachelorProgram ? ` (${bachelorProgram})` : ''}`
     : (class12Stream.toUpperCase() || 'GENERAL');
 
-  const appliedFilters = [
+  const appliedFilters = (customFilters && customFilters.length > 0) ? customFilters : [
     {
       stage: "Stage 1",
       columnName: "backgroundField",

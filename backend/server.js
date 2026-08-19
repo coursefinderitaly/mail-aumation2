@@ -834,11 +834,11 @@ app.post('/api/process-email', async (req, res) => {
 // Match courses directly with custom/updated student data
 app.post('/api/courses/match', async (req, res) => {
   try {
-    const { studentData, userInstruction } = req.body;
+    const { studentData, userInstruction, customFilters } = req.body;
     if (!studentData) {
       return res.status(400).json({ error: 'studentData is required' });
     }
-    const matchedCoursesRes = await matchCourses(studentData, userInstruction);
+    const matchedCoursesRes = await matchCourses(studentData, userInstruction, customFilters);
     const matchedCourses = matchedCoursesRes.matchedCourses || matchedCoursesRes || [];
     const poiNotAvailable = matchedCoursesRes.poiNotAvailable || false;
     const aiReasoning = matchedCoursesRes.aiReasoning || null;

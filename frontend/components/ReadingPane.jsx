@@ -101,7 +101,11 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
       const res = await fetch(`/api/courses/match`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentData: payload, threadId: email?.threadId || email?.id })
+        body: JSON.stringify({ 
+          studentData: payload, 
+          threadId: email?.threadId || email?.id,
+          customFilters: crmData?.appliedFilters // Send current active filters
+        })
       });
       const data = await res.json();
       if (data.matchedCourses) {
@@ -376,7 +380,9 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
       htmlBody: baseHtmlBody + quoteHtml,
       threadId: email.threadId,
       messageId: email.messageId,
-      references: email.references
+      references: email.references,
+      profileLabels: activeCrmData?.profileLabels || [],
+      crmData: activeCrmData
     });
   };
 
@@ -1107,6 +1113,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                               newFilters[idx].columnName = e.target.value;
                                               newFilters[idx].exactKeyword = ''; // reset on column change
                                               setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
                                             }}
                                             className="ml-1 bg-indigo-50 dark:bg-white/10 border-none dark:text-neutral-200 text-indigo-900 px-1.5 py-1 rounded text-[9px] font-mono font-bold focus:ring-1 focus:ring-indigo-400 max-w-[220px] truncate cursor-pointer"
                                           >
@@ -1121,6 +1128,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                               const newFilters = [...crmData.appliedFilters];
                                               newFilters.splice(idx, 1);
                                               setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
                                           }} className="text-red-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 cursor-pointer">
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                           </button>
@@ -1149,6 +1157,8 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                                       const newFilters = [...crmData.appliedFilters];
                                                       newFilters[idx].exactKeyword = newVals.join(' | ');
                                                       setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
+                                                      setLogicChanged(true);
                                                     }} className="ml-1 hover:text-red-500 dark:hover:text-red-400 font-black cursor-pointer">&times;</button>
                                                   </span>
                                                   );
@@ -1178,6 +1188,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                                  const newFilters = [...crmData.appliedFilters];
                                                  newFilters[idx].exactKeyword = newVals.join(' | ');
                                                  setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
                                                };
 
                                                return (
@@ -1229,6 +1240,8 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                                                const newFilters = [...crmData.appliedFilters];
                                                                newFilters[idx].exactKeyword = newVals.join(' | ');
                                                                setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
+                                                      setLogicChanged(true);
                                                              }}
                                                              className="rounded text-indigo-500 focus:ring-indigo-400 bg-transparent border-gray-300 dark:border-white/20 w-3 h-3 shrink-0 cursor-pointer"
                                                            />
@@ -1253,6 +1266,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                                               const newFilters = [...crmData.appliedFilters];
                                               newFilters[idx].exactKeyword = e.target.value;
                                               setCrmData(prev => ({...prev, appliedFilters: newFilters, matchedCourses: applyCrmFilters(newFilters, allCourses)}));
+                                              setLogicChanged(true);
                                             }}
                                             placeholder={f.columnName === 'percentage' ? "<= 65.0%" : "Type custom comma-separated values..."}
                                             className="w-full bg-white dark:bg-[#1a1a1a] border dark:border-white/10 border-indigo-200 rounded px-1.5 py-1 text-xs font-mono font-bold dark:text-emerald-300 text-emerald-700 focus:outline-none focus:border-indigo-400 mt-1"
