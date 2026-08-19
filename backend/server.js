@@ -912,9 +912,24 @@ app.get('/api/ai/training-doc', (req, res) => {
 // --- Serve Frontend Static Export ---
 const path = require('path');
 const frontendOutPath = path.join(__dirname, '../frontend/out');
-app.use(express.static(frontendOutPath));
+
+// Serve static assets with long cache for JS/CSS/images, but no-cache for HTML
+app.use(express.static(frontendOutPath, {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
 app.get('*', (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(path.join(frontendOutPath, 'index.html'));
 });
 
