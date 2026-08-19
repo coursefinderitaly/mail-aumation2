@@ -564,9 +564,13 @@ app.post('/api/labels/create', async (req, res) => {
 
 // API to Update Label (Color, Visibility, Name)
 app.put('/api/labels/:id', async (req, res) => {
+  require('fs').appendFileSync('debug_label.log', new Date().toISOString() + ' Hit PUT ' + req.params.id + '\n');
   const { id } = req.params;
   const { name, labelListVisibility, messageListVisibility, color } = req.body;
-  if (!db.tokens) return res.status(401).json({ error: 'Not connected' });
+  if (!db.tokens) {
+    require('fs').appendFileSync('debug_label.log', new Date().toISOString() + ' No tokens!\n');
+    return res.status(401).json({ error: 'Not connected' });
+  }
   oauth2Client.setCredentials(db.tokens);
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   try {
@@ -575,6 +579,8 @@ app.put('/api/labels/:id', async (req, res) => {
     if (labelListVisibility) requestBody.labelListVisibility = labelListVisibility;
     if (messageListVisibility) requestBody.messageListVisibility = messageListVisibility;
     if (color !== undefined) requestBody.color = color; // Can be null to clear
+    
+    require('fs').appendFileSync('debug_label.log', new Date().toISOString() + ' Sending to Gmail: ' + JSON.stringify(requestBody) + '\n');
 
     const response = await gmail.users.labels.patch({
       userId: 'me',
