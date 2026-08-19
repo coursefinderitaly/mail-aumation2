@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import LabelSettingsDropdown from './LabelSettingsDropdown';
 
 export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, userEmail, accounts = [], onSwitchAccount, onAddAccount, onLogout, onAdminLogout, theme, toggleTheme, isCollapsed, toggleCollapse }) {
   const [userLabels, setUserLabels] = useState([]);
@@ -7,6 +8,7 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
   const [newLabelName, setNewLabelName] = useState('');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [showAccountsMenu, setShowAccountsMenu] = useState(false);
+  const [activeSettingsLabel, setActiveSettingsLabel] = useState(null);
   const navItems = [
     { id: 'INBOX', label: 'Inbox', icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4' },
     { id: 'STARRED', label: 'Starred', icon: 'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z' },
@@ -63,8 +65,39 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
         setShowCreateLabel(false);
         fetchLabels();
       }
-    } catch (err) {
-      console.error(err);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleUpdateLabel = async (id, updates) => {
+    try {
+      const res = await fetch(`/api/labels/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      const data = await res.json();
+      if (data.id) {
+        setUserLabels(userLabels.map(l => l.id === id ? data : l));
+        setActiveSettingsLabel(null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteLabel = async (id) => {
+    try {
+      const res = await fetch(`/api/labels/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setUserLabels(userLabels.filter(l => l.id !== id));
+        setActiveSettingsLabel(null);
+        if (activeLabel === id) onChangeLabel('INBOX');
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -280,23 +313,48 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
           </div>
           
           <div className="space-y-0.5">
-            {userLabels.map((lbl) => (
-              <button 
-                key={lbl.id}
-                title={isCollapsed ? lbl.name : ''}
-                onClick={() => onChangeLabel(lbl.id)}
-                className={`w-full flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'px-2.5 py-1.5 space-x-2.5'} rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeLabel === lbl.id ? 'dark:bg-indigo-500/20 bg-indigo-50 dark:text-indigo-300 text-indigo-700 font-extrabold' : 'dark:text-neutral-400 text-slate-600 dark:hover:bg-white/[0.04] hover:bg-gray-100 dark:hover:text-white hover:text-slate-900'}`}
-              >
-                <svg className={`${isCollapsed ? 'w-4 h-4' : 'w-3.5 h-3.5'} shrink-0`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                {!isCollapsed && <span className="truncate">{lbl.name}</span>}
-              </button>
-            ))}
+            {userLabels.map((lbl) => {
+              if (lbl.labelListVisibility === 'labelHide') return null;
+              
+              return (
+              <div key={lbl.id} className="relative group/label flex items-center">
+                <button 
+                  title={isCollapsed ? lbl.name : ''}
+                  onClick={() => onChangeLabel(lbl.id)}
+                  className={`flex-1 flex items-center ${isCollapsed ? 'justify-center p-2.5' : 'px-2.5 py-1.5 space-x-2.5'} rounded-lg text-xs font-semibold transition-all cursor-pointer ${activeLabel === lbl.id ? 'dark:bg-indigo-500/20 bg-indigo-50 dark:text-indigo-300 text-indigo-700 font-extrabold' : 'dark:text-neutral-400 text-slate-600 dark:hover:bg-white/[0.04] hover:bg-gray-100 dark:hover:text-white hover:text-slate-900'}`}
+                >
+                  <svg className={`${isCollapsed ? 'w-4 h-4' : 'w-3.5 h-3.5'} shrink-0`} fill={lbl.color ? lbl.color.backgroundColor : 'none'} stroke={lbl.color ? lbl.color.textColor : 'currentColor'} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                  {!isCollapsed && <span className="truncate" style={lbl.color ? { color: lbl.color.backgroundColor } : {}}>{lbl.name}</span>}
+                </button>
+                {!isCollapsed && (
+                  <button 
+                    className="opacity-0 group-hover/label:opacity-100 p-1.5 dark:text-neutral-500 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-opacity shrink-0 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSettingsLabel({ label: lbl, anchorEl: e.currentTarget });
+                    }}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                  </button>
+                )}
+              </div>
+            )})}
             {userLabels.length === 0 && !isCollapsed && (
               <p className="text-[10px] dark:text-neutral-600 text-slate-400 px-2.5 italic">No custom labels</p>
             )}
           </div>
         </div>
       </div>
+
+      {activeSettingsLabel && (
+        <LabelSettingsDropdown
+          label={activeSettingsLabel.label}
+          anchorEl={activeSettingsLabel.anchorEl}
+          onClose={() => setActiveSettingsLabel(null)}
+          onUpdate={handleUpdateLabel}
+          onDelete={handleDeleteLabel}
+        />
+      )}
 
       {/* User Info / Account Switcher Trigger */}
       <div className={`pt-2.5 border-t dark:border-white/10 border-gray-200 mt-2 flex flex-col relative shrink-0 ${isCollapsed ? 'items-center' : 'px-0.5'}`}>

@@ -562,6 +562,45 @@ app.post('/api/labels/create', async (req, res) => {
   }
 });
 
+// API to Update Label (Color, Visibility, Name)
+app.put('/api/labels/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, labelListVisibility, messageListVisibility, color } = req.body;
+  if (!db.tokens) return res.status(401).json({ error: 'Not connected' });
+  oauth2Client.setCredentials(db.tokens);
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  try {
+    const requestBody = {};
+    if (name) requestBody.name = name;
+    if (labelListVisibility) requestBody.labelListVisibility = labelListVisibility;
+    if (messageListVisibility) requestBody.messageListVisibility = messageListVisibility;
+    if (color) requestBody.color = color; // { textColor: '#...', backgroundColor: '#...' }
+
+    const response = await gmail.users.labels.patch({
+      userId: 'me',
+      id,
+      requestBody
+    });
+    res.json(response.data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// API to Delete Label
+app.delete('/api/labels/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!db.tokens) return res.status(401).json({ error: 'Not connected' });
+  oauth2Client.setCredentials(db.tokens);
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+  try {
+    await gmail.users.labels.delete({ userId: 'me', id });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // API to Modify Email Labels (Star, Trash, Spam, Mark Read)
 app.post('/api/emails/:id/modify', async (req, res) => {
   const { id } = req.params;
