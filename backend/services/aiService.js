@@ -53,7 +53,7 @@ function parseStudentData(text, fallbackName = 'Student') {
   };
 
   const lower = text.toLowerCase();
-  const hasProfileKeywords = lower.includes('learner name') || lower.includes('program of interest') || lower.includes('class 12') || lower.includes('intake') || lower.includes('eligibility') || lower.includes('score') || lower.includes('stream') || lower.includes('passing') || lower.includes('bachelor') || lower.includes('graduation') || lower.includes('bca') || lower.includes('btech') || lower.includes('b.tech') || lower.includes('bsc') || lower.includes('b.sc') || lower.includes('bcom') || lower.includes('b.com') || lower.includes('bba') || lower.includes('degree') || lower.includes('master') || lower.includes('postgrad');
+  const hasProfileKeywords = lower.includes('learner name') || lower.includes('program of interest') || lower.includes('class 12') || lower.includes('intake') || lower.includes('eligibility') || lower.includes('score') || lower.includes('stream') || lower.includes('passing') || lower.includes('bachelor') || lower.includes('graduation') || lower.includes('bca') || lower.includes('btech') || lower.includes('b.tech') || lower.includes('bsc') || lower.includes('b.sc') || lower.includes('bcom') || lower.includes('b.com') || lower.includes('bba') || lower.includes('barch') || lower.includes('b.arch') || lower.includes('architecture') || lower.includes('degree') || lower.includes('master') || lower.includes('postgrad');
 
   if (!hasProfileKeywords) return null;
 
@@ -204,7 +204,7 @@ Keys:
 - age (number)
 - highestEducation ("Bachelors" | "Class 12th")
 - targetDegreeLevel ("Masters" | "Bachelor")
-- bachelorDegree (string | null, e.g. "BCA", "B.Tech", "B.Sc", "B.Com", "BBA", "BA")
+- bachelorDegree (string | null, e.g. "BCA", "B.Tech", "B.Sc", "B.Com", "BBA", "BA", "BArch", "B.Arch", "Bachelor of Architecture")
 - bachelorProgram (string | null, e.g. "Bachelors of Computer science")
 - bachelorScore (string | null, e.g. "71.17%", "7.5 CGPA")
 - bachelorDuration (string | null, e.g. "3 years", "4 years")

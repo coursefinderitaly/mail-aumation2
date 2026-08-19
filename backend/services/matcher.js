@@ -79,6 +79,9 @@ function getBackgroundCompatibilityPattern(stream, isMasterTarget, poi, bachelor
     if (bd.includes('b.com') || bd.includes('bba') || bp.includes('business') || bp.includes('commerce') || bp.includes('management')) {
       return /commerce|business|economics|management|finance|accounting|any background|any field|bachelor/i;
     }
+    if (bd.includes('barch') || bd.includes('b.arch') || bp.includes('architecture') || bd.includes('architecture')) {
+      return /architecture|urban|design|landscape|building|environmental|engineering|any background|any field|bachelor/i;
+    }
     return null; // Broad relaxation for Masters
   }
 
@@ -157,13 +160,13 @@ function getInterestProfile(poi, stream, bachelorProgram = '', bachelorDegree = 
   }
 
   // ── Architecture / Urban Planning / Design ──
-  if (combined.match(/\b(architecture|urban planning|urban design|interior design|landscape)\b/i)) {
+  if (combined.match(/\b(architecture|barch|b\.arch|bachelor of architecture|urban planning|urban design|interior design|landscape)\b/i)) {
     interests.push({
       label: 'Architecture',
       programMatch: /architecture|urban planning|interior design|landscape|building design/i,
       fieldMatch: /architecture|design/i,
       subMatch: /architecture|urban|design/i,
-      bgMatch: /physics|math|architecture|any background|any field/i,
+      bgMatch: /physics|math|architecture|barch|b\.arch|any background|any field/i,
       excludeFields: /medical|bio science|law|humanities|computer applications/i
     });
   }
@@ -317,6 +320,10 @@ function scoreCourse(course, studentProfile) {
       }
     } else if (bp.includes('business') || bd.includes('bba') || bd.includes('b.com') || bp.includes('commerce') || bp.includes('management')) {
       if (bgField.includes('business') || bgField.includes('commerce') || bgField.includes('economics') || bgField.includes('management')) {
+        score += 60;
+      }
+    } else if (bp.includes('architecture') || bd.includes('barch') || bd.includes('b.arch') || bd.includes('architecture')) {
+      if (bgField.includes('architecture') || bgField.includes('design') || bgField.includes('urban') || bgField.includes('landscape') || bgField.includes('building')) {
         score += 60;
       }
     }
