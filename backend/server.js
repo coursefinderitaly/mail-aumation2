@@ -574,7 +574,7 @@ app.put('/api/labels/:id', async (req, res) => {
     if (name) requestBody.name = name;
     if (labelListVisibility) requestBody.labelListVisibility = labelListVisibility;
     if (messageListVisibility) requestBody.messageListVisibility = messageListVisibility;
-    if (color) requestBody.color = color; // { textColor: '#...', backgroundColor: '#...' }
+    if (color !== undefined) requestBody.color = color; // Can be null to clear
 
     const response = await gmail.users.labels.patch({
       userId: 'me',

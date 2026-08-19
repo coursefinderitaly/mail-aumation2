@@ -2,14 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 const PRESET_COLORS = [
-  { text: '#000000', bg: '#f3f4f6' }, // Light gray
-  { text: '#1d4ed8', bg: '#dbeafe' }, // Blue
-  { text: '#0f766e', bg: '#ccfbf1' }, // Teal
-  { text: '#6d28d9', bg: '#ede9fe' }, // Purple
-  { text: '#be123c', bg: '#ffe4e6' }, // Rose
-  { text: '#c2410c', bg: '#ffedd5' }, // Orange
-  { text: '#4d7c0f', bg: '#ecfccb' }, // Green
-  { text: '#b45309', bg: '#fef3c7' }, // Amber
+  { text: '#000000', bg: '#cccccc' }, // Light gray
+  { text: '#ffffff', bg: '#3d85c6' }, // Blue
+  { text: '#ffffff', bg: '#45818e' }, // Teal
+  { text: '#ffffff', bg: '#674ea7' }, // Purple
+  { text: '#ffffff', bg: '#cb297b' }, // Rose
+  { text: '#ffffff', bg: '#ff8100' }, // Orange
+  { text: '#ffffff', bg: '#32cd32' }, // Green
+  { text: '#ffffff', bg: '#f1c232' }, // Amber
+  { text: '#ffffff', bg: '#ea2f10' }, // Red
+  { text: '#000000', bg: '#fad165' }, // Yellow
+  { text: '#ffffff', bg: '#16a766' }, // Dark Green
+  { text: '#ffffff', bg: '#434343' }, // Dark Gray
 ];
 
 export default function LabelSettingsDropdown({ label, onClose, onUpdate, onDelete, anchorEl }) {
