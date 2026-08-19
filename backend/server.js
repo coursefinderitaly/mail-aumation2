@@ -583,6 +583,7 @@ app.put('/api/labels/:id', async (req, res) => {
     });
     res.json(response.data);
   } catch (e) {
+    require('fs').appendFileSync('debug_label.log', new Date().toISOString() + ' ' + e.message + '\n');
     res.status(500).json({ error: e.message });
   }
 });
