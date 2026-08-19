@@ -88,10 +88,7 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
         body: JSON.stringify(updates)
       });
       const data = await res.json();
-      if (data.id) {
-        // Update with the actual data from server just in case
-        setUserLabels(prev => prev.map(l => l.id === id ? data : l));
-      } else {
+      if (!data.id) {
         // Revert on failure
         setUserLabels(originalLabels);
       }

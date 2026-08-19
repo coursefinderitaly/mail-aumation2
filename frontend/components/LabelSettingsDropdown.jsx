@@ -3,17 +3,17 @@ import { createPortal } from 'react-dom';
 
 const PRESET_COLORS = [
   { text: '#000000', bg: '#cccccc' }, // Light gray
+  { text: '#ffffff', bg: '#434343' }, // Dark gray
+  { text: '#ffffff', bg: '#ea2f10' }, // Red
+  { text: '#ffffff', bg: '#ff8100' }, // Orange
+  { text: '#000000', bg: '#fad165' }, // Yellow
+  { text: '#000000', bg: '#fce8b3' }, // Light Yellow
+  { text: '#ffffff', bg: '#16a766' }, // Green
+  { text: '#000000', bg: '#c9daf8' }, // Light Blue
   { text: '#ffffff', bg: '#3d85c6' }, // Blue
-  { text: '#ffffff', bg: '#45818e' }, // Teal
   { text: '#ffffff', bg: '#674ea7' }, // Purple
   { text: '#ffffff', bg: '#cb297b' }, // Rose
-  { text: '#ffffff', bg: '#ff8100' }, // Orange
-  { text: '#ffffff', bg: '#32cd32' }, // Green
-  { text: '#ffffff', bg: '#f1c232' }, // Amber
-  { text: '#ffffff', bg: '#ea2f10' }, // Red
-  { text: '#000000', bg: '#fad165' }, // Yellow
-  { text: '#ffffff', bg: '#16a766' }, // Dark Green
-  { text: '#ffffff', bg: '#434343' }, // Dark Gray
+  { text: '#ffffff', bg: '#8a1c82' }, // Dark Magenta
 ];
 
 export default function LabelSettingsDropdown({ label, onClose, onUpdate, onDelete, anchorEl }) {
