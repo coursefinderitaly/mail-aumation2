@@ -185,5 +185,52 @@ Eligibility Country: Italy
 }
 ```
 
+### Example #4
+**Input Sample:**
+```text
+Learner Name: Shruti Gupta
+Age: 16
+Class 12th - Stream: PCM
+Class 12th Score: 12th expected - 85% and above \n 11th - 83.83%
+Class 12th Year of Passing: 2027
+Class 12th Board: STATE
+Class 10th Score: 84.4%
+Class 10th Year of Passing: 2025
+Work Experience: 0
+Program of Interest: BTECH in AIML
+Intake Pitched: Sept 2027
+Eligibility Country: Italy
+AC - Learner's Comments/Annotation: BTECH in AIML
+```
+
+**Target Structured Output:**
+```json
+{
+  "learnerName": "Shruti Gupta",
+  "age": 16,
+  "highestEducation": "Class 12th",
+  "targetDegreeLevel": "Bachelor",
+  "bachelorDegree": null,
+  "bachelorProgram": null,
+  "bachelorScore": null,
+  "bachelorDuration": null,
+  "graduationYear": null,
+  "bachelorUniversity": null,
+  "class12Stream": "PCM",
+  "class12Score": "85%",
+  "class12Year": 2027,
+  "class12Board": "STATE",
+  "class11Score": "83.83%",
+  "class10Score": "84.4%",
+  "class10Year": 2025,
+  "workExperience": 0,
+  "programOfInterest": "AI/ML",
+  "intakePitched": "Sept 2027",
+  "eligibilityCountry": "Italy",
+  "isPursuing": false,
+  "isGap": false
+}
+```
+
 ---
 *Generated automatically by the Presume Overseas AI Control Center.*

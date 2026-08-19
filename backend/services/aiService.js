@@ -58,7 +58,10 @@ function parseStudentData(text, fallbackName = 'Student') {
   if (!hasProfileKeywords) return null;
 
   const learnerName = extract('Learner Name', 'Student Name', 'Candidate Name', 'Applicant Name', 'Name') || fallbackName;
-  const programOfInterest = extract('Program of Interest', 'Course of Interest', 'Program Pitched', 'Course', 'Program') || extract('Stream') || 'General Studies';
+  let programOfInterest = extract('Program of Interest', 'Course of Interest', 'Program Pitched', 'Course', 'Program') || extract('Stream') || 'General Studies';
+  if (programOfInterest.match(/\b(aiml|btech in aiml|btech aiml|ai\/ml|artificial intelligence)\b/i) || programOfInterest.toLowerCase().includes('aiml')) {
+    programOfInterest = 'AI/ML';
+  }
   const ageStr = extract('Age');
   const age = ageStr ? parseInt(ageStr) : 19;
 

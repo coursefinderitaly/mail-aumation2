@@ -124,10 +124,13 @@ function getInterestProfile(poi, stream, bachelorProgram = '', bachelorDegree = 
   const interests = [];
 
   // ── CS / AI / ML / Data Science / Software ──
-  if (combined.match(/\b(cs|computer science|computer engineering|artificial intelligence|ai|machine learning|ml|data science|data engineering|data analyst|data analytics|software|information technology|it|software engineering|bca|bachelor of computer|programming|coding|cyber|robotics|hci|nlp|deep learning|neural)\b/i)) {
+  if (combined.match(/\b(cs|computer science|computer engineering|artificial intelligence|ai|machine learning|ml|aiml|data science|data engineering|data analyst|data analytics|software|information technology|it|software engineering|bca|bachelor of computer|programming|coding|cyber|robotics|hci|nlp|deep learning|neural)\b/i) || combined.includes('ai/ml') || combined.includes('ai & ml') || combined.includes('aiml')) {
+    const isAiMl = combined.match(/\b(aiml|ai|ml|artificial intelligence|machine learning|deep learning|neural|robotics|nlp)\b/i) || combined.includes('ai/ml') || combined.includes('ai & ml') || combined.includes('aiml');
+    const isData = combined.match(/\b(data science|data engineering|data analyst|data analytics|big data)\b/i);
+
     interests.push({
-      label: 'CS/AI/ML',
-      programMatch: /computer|artificial intelligence|data science|data engineering|data analyst|data analytics|machine learning|software|information technology|cyber security|robotics|hci|neural|nlp|computer engineering|computer applications|data analysis|information engineering|computing|programming/i,
+      label: isAiMl ? 'AI/ML' : (isData ? 'Data Science' : 'CS/AI/ML'),
+      programMatch: /computer|artificial intelligence|data science|data engineering|data analyst|data analytics|machine learning|software|information technology|cyber security|robotics|hci|neural|nlp|computer engineering|computer applications|data analysis|information engineering|computing|programming|ai/i,
       fieldMatch: /computer|artificial|data|software|information|engineering|sciences/i,
       subMatch: /computer|artificial|data|software|information|machine learning|cyber/i,
       bgMatch: /physics|math|cs|computer|software|engineering|statistics|any background|any field|bachelor/i,
