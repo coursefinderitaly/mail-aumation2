@@ -22,6 +22,17 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
   const [intakePitched, setIntakePitched] = useState('Sept 2027');
 
   const editableRef = useRef(null);
+  const currentHtmlRef = useRef('');
+  const isEditableMounted = useRef(false);
+
+  useEffect(() => {
+    if (editableRef.current && !isEditableMounted.current) {
+      isEditableMounted.current = true;
+      editableRef.current.innerHTML = currentHtmlRef.current || htmlBody || '';
+    } else if (!editableRef.current) {
+      isEditableMounted.current = false;
+    }
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -40,6 +51,7 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
         setTo(initialData.to || '');
         setSubject(initialData.subject || '');
         setHtmlBody(initialData.htmlBody || '');
+        currentHtmlRef.current = initialData.htmlBody || '';
         setBody(initialData.body || '');
         setThreadId(initialData.threadId || null);
         setMessageId(initialData.messageId || '');
@@ -150,6 +162,8 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
     
     const generatedHtml = generateLiveTemplate(sName || 'Student', programOfInterest, intakePitched, initialCourses);
     setHtmlBody(generatedHtml);
+    currentHtmlRef.current = generatedHtml;
+    if (editableRef.current) editableRef.current.innerHTML = generatedHtml;
   };
 
   const handleAddCourse = (courseId) => {
@@ -158,7 +172,10 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
     if (courseToAdd && !selectedCourses.some(sc => String(sc.id || sc.universityName) === String(courseId))) {
       const newCourses = [...selectedCourses, courseToAdd];
       setSelectedCourses(newCourses);
-      setHtmlBody(generateLiveTemplate(studentName, programOfInterest, intakePitched, newCourses));
+      const generated = generateLiveTemplate(studentName, programOfInterest, intakePitched, newCourses);
+      setHtmlBody(generated);
+      currentHtmlRef.current = generated;
+      if (editableRef.current) editableRef.current.innerHTML = generated;
     }
   };
 
@@ -166,13 +183,16 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
     if (!courseId) return;
     const newCourses = selectedCourses.filter(sc => String(sc.id || sc.universityName) !== String(courseId));
     setSelectedCourses(newCourses);
-    setHtmlBody(generateLiveTemplate(studentName, programOfInterest, intakePitched, newCourses));
+    const generated = generateLiveTemplate(studentName, programOfInterest, intakePitched, newCourses);
+    setHtmlBody(generated);
+    currentHtmlRef.current = generated;
+    if (editableRef.current) editableRef.current.innerHTML = generated;
   };
 
   const handleSend = async () => {
     setIsSending(true);
     try {
-      const finalHtml = editableRef.current ? editableRef.current.innerHTML : htmlBody;
+      const finalHtml = editableRef.current ? editableRef.current.innerHTML : (currentHtmlRef.current || htmlBody);
       const payload = {
         to,
         subject,
@@ -270,7 +290,10 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                         value={studentName} 
                         onChange={(e) => {
                           setStudentName(e.target.value);
-                          setHtmlBody(generateLiveTemplate(e.target.value, programOfInterest, intakePitched, selectedCourses));
+                          const generated = generateLiveTemplate(e.target.value, programOfInterest, intakePitched, selectedCourses);
+                          setHtmlBody(generated);
+                          currentHtmlRef.current = generated;
+                          if (editableRef.current) editableRef.current.innerHTML = generated;
                         }}
                         className="px-3.5 py-2.5 rounded-xl text-xs dark:bg-black/60 bg-white border dark:border-white/15 border-gray-300 dark:text-white text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs transition-all"
                       />
@@ -283,7 +306,10 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                         value={programOfInterest} 
                         onChange={(e) => {
                           setProgramOfInterest(e.target.value);
-                          setHtmlBody(generateLiveTemplate(studentName, e.target.value, intakePitched, selectedCourses));
+                          const generated = generateLiveTemplate(studentName, e.target.value, intakePitched, selectedCourses);
+                          setHtmlBody(generated);
+                          currentHtmlRef.current = generated;
+                          if (editableRef.current) editableRef.current.innerHTML = generated;
                         }}
                         className="px-3.5 py-2.5 rounded-xl text-xs dark:bg-black/60 bg-white border dark:border-white/15 border-gray-300 dark:text-white text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs transition-all"
                       />
@@ -296,7 +322,10 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                         value={intakePitched} 
                         onChange={(e) => {
                           setIntakePitched(e.target.value);
-                          setHtmlBody(generateLiveTemplate(studentName, programOfInterest, e.target.value, selectedCourses));
+                          const generated = generateLiveTemplate(studentName, programOfInterest, e.target.value, selectedCourses);
+                          setHtmlBody(generated);
+                          currentHtmlRef.current = generated;
+                          if (editableRef.current) editableRef.current.innerHTML = generated;
                         }}
                         className="px-3.5 py-2.5 rounded-xl text-xs dark:bg-black/60 bg-white border dark:border-white/15 border-gray-300 dark:text-white text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs transition-all"
                       />
@@ -442,7 +471,9 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                           suppressContentEditableWarning={true}
                           className="w-full min-h-full p-8 sm:p-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-base leading-relaxed font-sans selection:bg-indigo-500/30 text-slate-900 dark:text-neutral-100"
                           style={{ zoom: zoomLevel }}
-                          dangerouslySetInnerHTML={{ __html: htmlBody }} 
+                          onInput={(e) => {
+                            currentHtmlRef.current = e.target.innerHTML;
+                          }}
                         />
                       </div>
                     </div>
