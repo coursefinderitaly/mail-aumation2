@@ -1830,7 +1830,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
 
 function generateTemplate(crmData, studentName, isPursuing = false, isGap = false) {
   const student = crmData?.studentData || {};
-  const intake = student.intakePitched || 'Sept 2027';
+  const intake = String(student.intakePitched || 'Sept 2027');
 
   // Extract year information for dynamic year disclaimers
   const currentYear = new Date().getFullYear(); // e.g. 2026
@@ -1843,7 +1843,7 @@ function generateTemplate(crmData, studentName, isPursuing = false, isGap = fals
     student.bachelorScore || 
     student.highestEducation === 'Bachelors' || 
     student.targetDegreeLevel === 'Masters' || 
-    (student.programOfInterest || '').toLowerCase().match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i)
+    String(student.programOfInterest || '').toLowerCase().match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i)
   );
 
   const matchedCourses = crmData?.matchedCourses || [];

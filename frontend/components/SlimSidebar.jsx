@@ -164,37 +164,12 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
         {!isCollapsed && <span className="tracking-wide uppercase text-[11px]">Compose</span>}
       </button>
 
-      {/* AI Robot Toggle Container */}
-      <div className={`mb-3 shrink-0 w-full flex items-center ${isCollapsed ? 'justify-center flex-col' : 'justify-between px-3 py-1.5 rounded-xl dark:bg-[#131317] bg-white border dark:border-white/10 border-gray-200 shadow-xs'}`}>
-        {isCollapsed ? (
-          <button onClick={toggleAutoReply} title="Toggle AI Auto Reply" className="relative cursor-pointer group">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${autoReplyEnabled ? 'bg-indigo-500/10 border border-indigo-500/20' : 'dark:bg-white/5 bg-gray-100'}`}>
-              <img src="/robot.png" alt="AI Robot" className={`w-6 h-6 object-contain transition-all ${autoReplyEnabled ? '' : 'grayscale opacity-50'}`} />
-            </div>
-            {autoReplyEnabled && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#fbfaf6] dark:border-[#0a0a0a] rounded-full"></div>}
-          </button>
-        ) : (
-          <>
-            <div className="flex items-center space-x-2.5 overflow-hidden">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all shrink-0 ${autoReplyEnabled ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'dark:bg-white/5 bg-gray-100 opacity-50 grayscale'}`}>
-                <img src="/robot.png" alt="AI Robot" className="w-4 h-4 object-contain" />
-              </div>
-              <div className="flex flex-col truncate">
-                <span className="text-[11px] font-bold dark:text-white text-slate-800 leading-none">AI Worker</span>
-                <span className={`text-[9px] font-extrabold tracking-wider mt-0.5 ${autoReplyEnabled ? 'text-emerald-500' : 'dark:text-neutral-500 text-slate-400'}`}>{autoReplyEnabled ? 'ACTIVE' : 'OFF'}</span>
-              </div>
-            </div>
-            {/* Custom Toggle Slider */}
-            <button 
-              onClick={toggleAutoReply}
-              title="Toggle automatic student inquiry processing"
-              className={`relative w-8 h-4 rounded-full transition-colors duration-200 ease-in-out cursor-pointer shrink-0 ${autoReplyEnabled ? 'bg-emerald-500' : 'dark:bg-white/20 bg-gray-300'}`}
-            >
-              <div className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${autoReplyEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
-            </button>
-          </>
-        )}
-      </div>
+      {/* AI Robot Toggle Container (Temporarily hidden by user request) */}
+      {/* 
+      <div className={\`mb-3 shrink-0 w-full flex items-center \${isCollapsed ? 'justify-center flex-col' : 'justify-between px-3 py-1.5 rounded-xl dark:bg-[#131317] bg-white border dark:border-white/10 border-gray-200 shadow-xs'}\`}>
+      ...
+      </div> 
+      */}
 
       <div className="flex-1 flex flex-col space-y-3.5 w-full min-h-0 overflow-y-auto custom-scrollbar pr-0.5">
         {/* AI Model Control Center Navigation Route */}
