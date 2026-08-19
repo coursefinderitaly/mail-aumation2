@@ -967,7 +967,8 @@ if (require.main === module) {
 
 module.exports = app;
 
-// Auto Analyzer & Reply Worker (runs every 30 seconds)
+// Auto Analyzer & Reply Worker (Disabled by user request)
+/*
 setInterval(async () => {
   if (!db.tokens) return;
   oauth2Client.setCredentials(db.tokens);
@@ -1087,3 +1088,4 @@ setInterval(async () => {
     }
   }
 }, 30000);
+*/
