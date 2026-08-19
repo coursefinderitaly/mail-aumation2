@@ -803,18 +803,6 @@ app.post('/api/process-email', async (req, res) => {
     const missing11thScore = matchedCoursesRes.missing11thScore || false;
     const isNoCourseOptionsForPoi = matchedCoursesRes.isNoCourseOptionsForPoi || false;
 
-    // Auto-apply profile labels to Gmail thread if connected
-    const targetThreadId = req.body.threadId || req.body.emailId;
-    if (targetThreadId && db.tokens && matchedCoursesRes.profileLabels && matchedCoursesRes.profileLabels.length > 0) {
-      try {
-        oauth2Client.setCredentials(db.tokens);
-        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-        await autoApplyProfileLabelsToThread(gmail, targetThreadId, matchedCoursesRes.profileLabels);
-      } catch (err) {
-        console.error('Auto-apply labels error in analyze-email:', err.message);
-      }
-    }
-
     res.json({
       studentData,
       matchedCourses,
@@ -836,7 +824,7 @@ app.post('/api/process-email', async (req, res) => {
 // Match courses directly with custom/updated student data
 app.post('/api/courses/match', async (req, res) => {
   try {
-    const { studentData, userInstruction, threadId, emailId } = req.body;
+    const { studentData, userInstruction } = req.body;
     if (!studentData) {
       return res.status(400).json({ error: 'studentData is required' });
     }
@@ -846,18 +834,6 @@ app.post('/api/courses/match', async (req, res) => {
     const aiReasoning = matchedCoursesRes.aiReasoning || null;
     const missing11thScore = matchedCoursesRes.missing11thScore || false;
     const isNoCourseOptionsForPoi = matchedCoursesRes.isNoCourseOptionsForPoi || false;
-    
-    // Auto-apply profile labels to Gmail thread if connected
-    const targetThreadId = threadId || emailId;
-    if (targetThreadId && db.tokens && matchedCoursesRes.profileLabels && matchedCoursesRes.profileLabels.length > 0) {
-      try {
-        oauth2Client.setCredentials(db.tokens);
-        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-        await autoApplyProfileLabelsToThread(gmail, targetThreadId, matchedCoursesRes.profileLabels);
-      } catch (err) {
-        console.error('Auto-apply labels error in /api/courses/match:', err.message);
-      }
-    }
 
     res.json({
       studentData,

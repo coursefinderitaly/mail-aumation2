@@ -231,7 +231,9 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
         htmlBody: finalHtml || `<p>${body.replace(/\n/g, '<br/>')}</p>`,
         threadId,
         messageId,
-        references
+        references,
+        profileLabels: initialData?.profileLabels || initialData?.crmData?.profileLabels || [],
+        crmData: initialData?.crmData
       };
       const res = await fetch(`/api/send-email`, {
         method: 'POST',

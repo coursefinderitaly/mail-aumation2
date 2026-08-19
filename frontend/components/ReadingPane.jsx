@@ -393,7 +393,9 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
           to: email.rawFrom || email.from,
           subject: `Re: ${email.subject}`,
           htmlBody,
-          threadId: email.threadId
+          threadId: email.threadId,
+          profileLabels: crmData?.profileLabels || [],
+          crmData: crmData
         })
       });
       const data = await res.json();
