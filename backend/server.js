@@ -587,6 +587,30 @@ async function getOrCreateGmailLabel(gmail, name) {
   }
 }
 
+// Helper to automatically create and apply AI profile labels to a Gmail thread
+async function autoApplyProfileLabelsToThread(gmail, threadId, profileLabels = []) {
+  if (!gmail || !threadId || !Array.isArray(profileLabels) || profileLabels.length === 0) return;
+  try {
+    const labelIdsToAdd = [];
+    for (const lName of profileLabels) {
+      if (!lName) continue;
+      const lid = await getOrCreateGmailLabel(gmail, lName);
+      if (lid && !labelIdsToAdd.includes(lid)) {
+        labelIdsToAdd.push(lid);
+      }
+    }
+    if (labelIdsToAdd.length > 0) {
+      await gmail.users.threads.modify({
+        userId: 'me',
+        id: threadId,
+        requestBody: { addLabelIds: labelIdsToAdd }
+      });
+    }
+  } catch (err) {
+    console.error(`Failed to auto-apply labels to thread ${threadId}:`, err.message);
+  }
+}
+
 // API to Fetch User Labels
 app.get('/api/labels', async (req, res) => {
   if (!db.tokens) return res.status(401).json({ error: 'Not connected' });
@@ -757,16 +781,18 @@ app.post('/api/process-email', async (req, res) => {
     const path = require('path');
     fs.writeFileSync(path.join(__dirname, 'data.json'), JSON.stringify(db, null, 2), 'utf8');
 
-    if (!studentData) {
-      return res.json({ studentData: null, matchedCourses: [], isAiUsed, reason });
+    // Auto-apply profile labels to Gmail thread if connected
+    const targetThreadId = req.body.threadId || req.body.emailId;
+    if (targetThreadId && db.tokens && matchedCoursesRes.profileLabels && matchedCoursesRes.profileLabels.length > 0) {
+      try {
+        oauth2Client.setCredentials(db.tokens);
+        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+        await autoApplyProfileLabelsToThread(gmail, targetThreadId, matchedCoursesRes.profileLabels);
+      } catch (err) {
+        console.error('Auto-apply labels error in analyze-email:', err.message);
+      }
     }
-    const matchedCoursesRes = await matchCourses(studentData, userInstruction);
-    const matchedCourses = matchedCoursesRes.matchedCourses || matchedCoursesRes || [];
-    const poiNotAvailable = matchedCoursesRes.poiNotAvailable || false;
-    const aiReasoning = matchedCoursesRes.aiReasoning || null;
-    const missing11thScore = matchedCoursesRes.missing11thScore || false;
-    const isNoCourseOptionsForPoi = matchedCoursesRes.isNoCourseOptionsForPoi || false;
-    
+
     res.json({
       studentData,
       matchedCourses,
@@ -788,7 +814,7 @@ app.post('/api/process-email', async (req, res) => {
 // Match courses directly with custom/updated student data
 app.post('/api/courses/match', async (req, res) => {
   try {
-    const { studentData, userInstruction } = req.body;
+    const { studentData, userInstruction, threadId, emailId } = req.body;
     if (!studentData) {
       return res.status(400).json({ error: 'studentData is required' });
     }
@@ -799,6 +825,18 @@ app.post('/api/courses/match', async (req, res) => {
     const missing11thScore = matchedCoursesRes.missing11thScore || false;
     const isNoCourseOptionsForPoi = matchedCoursesRes.isNoCourseOptionsForPoi || false;
     
+    // Auto-apply profile labels to Gmail thread if connected
+    const targetThreadId = threadId || emailId;
+    if (targetThreadId && db.tokens && matchedCoursesRes.profileLabels && matchedCoursesRes.profileLabels.length > 0) {
+      try {
+        oauth2Client.setCredentials(db.tokens);
+        const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+        await autoApplyProfileLabelsToThread(gmail, targetThreadId, matchedCoursesRes.profileLabels);
+      } catch (err) {
+        console.error('Auto-apply labels error in /api/courses/match:', err.message);
+      }
+    }
+
     res.json({
       studentData,
       matchedCourses,

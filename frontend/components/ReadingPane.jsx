@@ -101,7 +101,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
       const res = await fetch(`/api/courses/match`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentData: payload })
+        body: JSON.stringify({ studentData: payload, threadId: email?.threadId || email?.id })
       });
       const data = await res.json();
       if (data.matchedCourses) {
@@ -331,7 +331,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
         const res = await fetch(`/api/courses/match`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentData: payload })
+          body: JSON.stringify({ studentData: payload, threadId: email?.threadId || email?.id })
         });
         const data = await res.json();
         if (data.matchedCourses) {
