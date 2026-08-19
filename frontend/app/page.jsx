@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import SlimSidebar from '../components/SlimSidebar';
 import EmailList from '../components/EmailList';
@@ -486,6 +487,31 @@ export default function Page() {
         }} 
         initialData={composeData}
       />
+
+      {/* Floating Notification for AI Analysis */}
+      <AnimatePresence>
+        {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, scale: 0.95, x: '-50%' }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed bottom-10 left-1/2 z-[9999] flex items-center gap-4 bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-md px-6 py-4 rounded-full shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border border-indigo-200 dark:border-white/10"
+          >
+            <div className="relative flex items-center justify-center w-8 h-8 shrink-0">
+              <span className="absolute inline-flex w-full h-full rounded-full bg-indigo-500 opacity-20 animate-ping"></span>
+              <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400 animate-spin relative z-10" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-neutral-200">Analyzing Inquiry...</h3>
+              <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5 font-medium">AI Engine is processing this email</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
