@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const PRESET_COLORS = [
+  { name: 'Black', value: '#000000' },
+  { name: 'White', value: '#ffffff' },
+  { name: 'Gray', value: '#6b7280' },
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Purple', value: '#a855f7' }
+];
+
 export default function ComposeModal({ isOpen, onClose, initialData }) {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
@@ -495,13 +507,26 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                             
                             <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
                             
-                            <div className="flex items-center gap-1" title="Text Color">
-                              <span className="text-[10px] font-bold text-slate-500">A</span>
-                              <input type="color" onChange={(e) => handleFormat('foreColor', e.target.value)} className="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent" />
+                            <div className="relative group flex items-center justify-center">
+                              <button className="flex items-center justify-center gap-1 w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-neutral-700 cursor-pointer" title="Text Color">
+                                <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300">A</span>
+                              </button>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-3 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
+                                {PRESET_COLORS.map(c => (
+                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('foreColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: c.value }} title={c.name}></button>
+                                ))}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1" title="Highlight Color">
-                              <span className="text-[10px] font-bold text-slate-500 bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">bg</span>
-                              <input type="color" onChange={(e) => handleFormat('hiliteColor', e.target.value)} className="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent" />
+
+                            <div className="relative group flex items-center justify-center">
+                              <button className="flex items-center justify-center gap-1 w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-neutral-700 cursor-pointer" title="Highlight Color">
+                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded leading-tight">bg</span>
+                              </button>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-3 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
+                                {PRESET_COLORS.map(c => (
+                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('hiliteColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: c.value }} title={c.name}></button>
+                                ))}
+                              </div>
                             </div>
                             
                             <div className="w-[1px] h-4 bg-gray-300 dark:bg-neutral-700 mx-1"></div>
