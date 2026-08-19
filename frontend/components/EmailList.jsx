@@ -16,13 +16,20 @@ export default function EmailList({
   hasNextPage = false,
   hasPrevPage = false,
   onNextPage,
-  onPrevPage
+  onPrevPage,
+  searchQuery: searchQueryProp = '',
+  onSearch
 }) {
   const listRef = useRef();
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState(searchQueryProp);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState([]);
+
+  useEffect(() => {
+    setSearchQuery(searchQueryProp);
+  }, [searchQueryProp]);
 
   const isFirstRender = useRef(true);
   const prevFilter = useRef(filter);
@@ -55,12 +62,27 @@ export default function EmailList({
   const notAnalysedCount = emails.filter(e => e.isNotAnalysed).length;
 
   const filteredEmails = emails.filter(e => {
-    if (filter === 'unread') return e.labelIds?.includes('UNREAD');
-    if (filter === 'attachments') return e.hasAttachments || (e.attachments && e.attachments.length > 0);
-    if (filter === 'ready') return e.isReadyToSend;
-    if (filter === 'sended') return e.isCourseOptionSent;
-    if (filter === 'not_sended') return e.isNotSended;
-    if (filter === 'not_analysed') return e.isNotAnalysed;
+    let matchesCategory = true;
+    if (filter === 'unread') matchesCategory = e.labelIds?.includes('UNREAD');
+    else if (filter === 'attachments') matchesCategory = e.hasAttachments || (e.attachments && e.attachments.length > 0);
+    else if (filter === 'ready') matchesCategory = e.isReadyToSend;
+    else if (filter === 'sended') matchesCategory = e.isCourseOptionSent;
+    else if (filter === 'not_sended') matchesCategory = e.isNotSended;
+    else if (filter === 'not_analysed') matchesCategory = e.isNotAnalysed;
+
+    if (!matchesCategory) return false;
+
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const fromText = (e.from || e.rawFrom || '').toLowerCase();
+      const subjectText = (e.subject || '').toLowerCase();
+      const snippetText = (e.snippet || '').toLowerCase();
+      const bodyText = (e.body || e.text || '').toLowerCase();
+      const idText = (e.id || e.threadId || '').toLowerCase();
+
+      return fromText.includes(q) || subjectText.includes(q) || snippetText.includes(q) || bodyText.includes(q) || idText.includes(q);
+    }
+
     return true;
   });
 
@@ -132,9 +154,34 @@ export default function EmailList({
             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 dark:text-neutral-500 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input 
               type="text" 
-              placeholder="Search emails..." 
-              className="w-full dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm dark:text-neutral-200 text-slate-900 dark:placeholder-neutral-600 placeholder-slate-400 focus:outline-none dark:focus:border-white/20 focus:border-indigo-400 dark:focus:bg-[#222] focus:bg-white transition-colors"
+              placeholder="Search emails (press Enter to search entire mailbox)..." 
+              value={searchQuery}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                if (val === '' && onSearch) {
+                  onSearch('');
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && onSearch) {
+                  onSearch(searchQuery);
+                }
+              }}
+              className="w-full dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl pl-10 pr-9 py-2.5 text-sm dark:text-neutral-200 text-slate-900 dark:placeholder-neutral-600 placeholder-slate-400 focus:outline-none dark:focus:border-white/20 focus:border-indigo-400 dark:focus:bg-[#222] focus:bg-white transition-colors"
             />
+            {searchQuery && (
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  if (onSearch) onSearch('');
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold p-1 transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <button 
             onClick={onRefresh}

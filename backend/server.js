@@ -381,6 +381,7 @@ app.get('/api/emails', async (req, res) => {
   const requestedMax = parseInt(req.query.maxResults, 10);
   const maxResults = (!isNaN(requestedMax) && requestedMax >= 5 && requestedMax <= 100) ? requestedMax : 25;
   const pageToken = req.query.pageToken || null;
+  const searchParam = req.query.search || req.query.q || '';
   
   const listParams = {
     userId: 'me',
@@ -392,6 +393,7 @@ app.get('/api/emails', async (req, res) => {
     listParams.pageToken = pageToken;
   }
 
+  let qParts = [];
   if (label !== 'ALL' && label !== 'all') {
     const systemLabels = {
       'INBOX': 'in:inbox',
@@ -406,10 +408,18 @@ app.get('/api/emails', async (req, res) => {
     };
     
     if (systemLabels[label]) {
-      listParams.q = systemLabels[label];
+      qParts.push(systemLabels[label]);
     } else {
       listParams.labelIds = [label];
     }
+  }
+
+  if (searchParam && searchParam.trim()) {
+    qParts.push(searchParam.trim());
+  }
+
+  if (qParts.length > 0) {
+    listParams.q = qParts.join(' ');
   }
   
   try {

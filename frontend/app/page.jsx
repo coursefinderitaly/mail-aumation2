@@ -166,19 +166,23 @@ export default function Page() {
     window.location.href = `/auth/google`;
   };
 
-  // Pagination State
+  // Pagination & Search State
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPageToken, setNextPageToken] = useState(null);
   const [pageTokenStack, setPageTokenStack] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchEmails = async (label = activeLabel, showLoader = true, overridePageSize = pageSize, pToken = null) => {
+  const fetchEmails = async (label = activeLabel, showLoader = true, overridePageSize = pageSize, pToken = null, sQuery = searchQuery) => {
     if (label === 'AI_MODEL' || label === 'COURSES_EXCEL' || label === 'MAIL_FORMATS') return;
     if (showLoader) setIsFetching(true);
     try {
       let url = `/api/emails?label=${encodeURIComponent(label)}&maxResults=${overridePageSize}`;
       if (pToken) {
         url += `&pageToken=${encodeURIComponent(pToken)}`;
+      }
+      if (sQuery && sQuery.trim()) {
+        url += `&search=${encodeURIComponent(sQuery.trim())}`;
       }
       const res = await fetch(url);
       const data = await res.json();
@@ -204,11 +208,19 @@ export default function Page() {
     }
   };
 
+  const handleSearch = (q) => {
+    setSearchQuery(q);
+    setCurrentPage(1);
+    setPageTokenStack([]);
+    setNextPageToken(null);
+    fetchEmails(activeLabel, true, pageSize, null, q);
+  };
+
   const handleNextPage = () => {
     if (!nextPageToken) return;
     setPageTokenStack(prev => [...prev, nextPageToken]);
     setCurrentPage(prev => prev + 1);
-    fetchEmails(activeLabel, true, pageSize, nextPageToken);
+    fetchEmails(activeLabel, true, pageSize, nextPageToken, searchQuery);
   };
 
   const handlePrevPage = () => {
@@ -218,7 +230,7 @@ export default function Page() {
     const prevToken = newStack.length > 0 ? newStack[newStack.length - 1] : null;
     setPageTokenStack(newStack);
     setCurrentPage(prev => Math.max(1, prev - 1));
-    fetchEmails(activeLabel, true, pageSize, prevToken);
+    fetchEmails(activeLabel, true, pageSize, prevToken, searchQuery);
   };
 
   const handleChangePageSize = (newSize) => {
@@ -226,7 +238,7 @@ export default function Page() {
     setCurrentPage(1);
     setPageTokenStack([]);
     setNextPageToken(null);
-    fetchEmails(activeLabel, true, newSize, null);
+    fetchEmails(activeLabel, true, newSize, null, searchQuery);
   };
 
   const handleModifyEmail = async (emailId, addLabelIds = [], removeLabelIds = []) => {
@@ -498,7 +510,7 @@ export default function Page() {
                   emails={emails} 
                   selectedEmail={selectedEmail} 
                   onSelect={selectEmailAndProcess} 
-                  onRefresh={() => fetchEmails(activeLabel, true, pageSize, pageTokenStack.length > 0 ? pageTokenStack[pageTokenStack.length - 1] : null)}
+                  onRefresh={() => fetchEmails(activeLabel, true, pageSize, pageTokenStack.length > 0 ? pageTokenStack[pageTokenStack.length - 1] : null, searchQuery)}
                   isFetching={isFetching}
                   activeLabel={activeLabel}
                   onModifyEmail={handleModifyEmail}
@@ -509,6 +521,8 @@ export default function Page() {
                   hasPrevPage={pageTokenStack.length > 0}
                   onNextPage={handleNextPage}
                   onPrevPage={handlePrevPage}
+                  searchQuery={searchQuery}
+                  onSearch={handleSearch}
                 />
               </Panel>
             ) : (
