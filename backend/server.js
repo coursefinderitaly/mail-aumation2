@@ -950,7 +950,10 @@ const PORT = process.env.PORT || 5000;
 let server;
 
 if (require.main === module) {
-  server = app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔗 Local Preview URL: http://localhost:${PORT}`);
+  });
 
   server.on('error', (e) => {
     if (e.code === 'EADDRINUSE') {
@@ -960,7 +963,10 @@ if (require.main === module) {
       } catch(err) {}
       setTimeout(() => {
         server.close();
-        server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (after recovery)`));
+        server.listen(PORT, () => {
+          console.log(`🚀 Server running on port ${PORT} (after recovery)`);
+          console.log(`🔗 Local Preview URL: http://localhost:${PORT}`);
+        });
       }, 500);
     } else {
       console.error('[Server Error]', e);
