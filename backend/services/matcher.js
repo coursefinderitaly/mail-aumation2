@@ -459,11 +459,17 @@ async function matchCourses(studentData, userInstruction = '') {
   const stream = String(class12Stream    || '').toLowerCase();
   const work   = String(workExperience   || '').toLowerCase();
 
-  // Detect education level target: If student has Bachelor's degree/score/details, target Masters!
-  const hasBachelor = !!(bachelorDegree || bachelorScore || bachelorProgram || graduationYear || bachelorUniversity || highestEducation === 'Bachelors');
-  const isMasterTarget = hasBachelor || targetDegreeLevel === 'Masters' ||
-    !!poi.match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i) ||
-    !!work.match(/\b(years|exp|manager)\b/i);
+  // Detect education level target: A student ONLY targets Masters if they have an actual completed Bachelor's score/graduation year/university OR if POI explicitly contains Masters/MSc/MBA.
+  const hasBachelor = !!(
+    (bachelorScore && String(bachelorScore).trim() !== '') ||
+    (graduationYear && Number(graduationYear) > 2000) ||
+    (bachelorUniversity && String(bachelorUniversity).trim() !== '') ||
+    (highestEducation === 'Bachelors' && !class12Stream)
+  );
+
+  const isMasterTarget = hasBachelor ||
+    (targetDegreeLevel === 'Masters' && hasBachelor) ||
+    !!poi.match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i);
 
   const isUndergrad = !isMasterTarget;
   const lastEducation = isMasterTarget

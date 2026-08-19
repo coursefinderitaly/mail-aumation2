@@ -88,9 +88,17 @@ function parseStudentData(text, fallbackName = 'Student') {
   const eligibilityCountry = extract('Eligibility Country', 'Country of Interest', 'Target Country', 'Country') || 'Global';
   const commentsAnnotation = extract("LC - Learner's Comments/Annotation", "Learner's Comments/Annotation", "Comments/Annotation", "AC - Learner's Comments/Annotation", "Comments");
 
-  const hasBachelor = !!(bachelorDegree || bachelorScore || bachelorProgram || graduationYear || bachelorUniversity);
+  const hasBachelor = !!(
+    (bachelorScore && String(bachelorScore).trim() !== '') || 
+    (graduationYear && graduationYear > 2000) || 
+    (bachelorUniversity && String(bachelorUniversity).trim() !== '') ||
+    (bachelorDegree && String(bachelorDegree).toLowerCase() !== 'barch' && String(bachelorDegree).toLowerCase() !== 'b.arch' && !class12Year)
+  );
   const highestEducation = hasBachelor ? 'Bachelors' : 'Class 12th';
-  const isMasterTarget = hasBachelor || !!(programOfInterest && programOfInterest.match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i));
+  
+  // If student has Class 12th info and NO bachelor score/graduation year, target is Bachelor
+  const isTargetingMasterByPoi = !!(programOfInterest && programOfInterest.match(/\b(master|masters|msc|ma|mba|post grad|postgraduate)\b/i));
+  const isMasterTarget = hasBachelor || isTargetingMasterByPoi;
   const targetDegreeLevel = isMasterTarget ? 'Masters' : 'Bachelor';
 
   const isPursuing = cleanText.toLowerCase().includes('pursuing');
@@ -253,11 +261,21 @@ ${maskPII(emailText)}
 
     // Post-processing integrity check for Gap and Education levels
     const currentYear = new Date().getFullYear();
-    const hasBachelor = !!(aiParsedData.bachelorDegree || aiParsedData.bachelorScore || aiParsedData.bachelorProgram || aiParsedData.graduationYear || aiParsedData.bachelorUniversity);
-    if (hasBachelor) {
+    const hasRealBachelor = !!(
+      (aiParsedData.bachelorScore && String(aiParsedData.bachelorScore).trim() !== '') ||
+      (aiParsedData.graduationYear && Number(aiParsedData.graduationYear) > 2000) ||
+      (aiParsedData.bachelorUniversity && String(aiParsedData.bachelorUniversity).trim() !== '')
+    );
+
+    if (hasRealBachelor) {
       aiParsedData.highestEducation = 'Bachelors';
       aiParsedData.targetDegreeLevel = 'Masters';
-    } else if (!aiParsedData.highestEducation) {
+    } else {
+      aiParsedData.bachelorDegree = null;
+      aiParsedData.bachelorProgram = null;
+      aiParsedData.bachelorScore = null;
+      aiParsedData.graduationYear = null;
+      aiParsedData.bachelorUniversity = null;
       aiParsedData.highestEducation = 'Class 12th';
       aiParsedData.targetDegreeLevel = 'Bachelor';
     }
