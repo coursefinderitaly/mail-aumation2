@@ -4,13 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 const PRESET_COLORS = [
   { name: 'Black', value: '#000000' },
   { name: 'White', value: '#ffffff' },
-  { name: 'Gray', value: '#6b7280' },
-  { name: 'Red', value: '#ef4444' },
+  { name: 'Pure Red', value: '#FF0000' },
+  { name: 'Pure Green', value: '#00FF00' },
+  { name: 'Pure Blue', value: '#0000FF' },
+  { name: 'Pure Yellow', value: '#FFFF00' },
+  { name: 'Amber', value: '#f59e0b' },
+  { name: 'Peach', value: '#fce4d6' },
   { name: 'Orange', value: '#f97316' },
-  { name: 'Yellow', value: '#eab308' },
-  { name: 'Green', value: '#22c55e' },
-  { name: 'Blue', value: '#3b82f6' },
-  { name: 'Purple', value: '#a855f7' }
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Gray', value: '#6b7280' },
+  { name: 'Clear', value: 'transparent' }
 ];
 
 export default function ComposeModal({ isOpen, onClose, initialData }) {
@@ -511,9 +514,11 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                               <button className="flex items-center justify-center gap-1 w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-neutral-700 cursor-pointer" title="Text Color">
                                 <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300">A</span>
                               </button>
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-3 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-4 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
                                 {PRESET_COLORS.map(c => (
-                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('foreColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: c.value }} title={c.name}></button>
+                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('foreColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer relative overflow-hidden" style={{ backgroundColor: c.value === 'transparent' ? '#f1f5f9' : c.value }} title={c.name}>
+                                    {c.value === 'transparent' && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-black text-[10px] leading-none">/</div>}
+                                  </button>
                                 ))}
                               </div>
                             </div>
@@ -522,9 +527,11 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
                               <button className="flex items-center justify-center gap-1 w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-neutral-700 cursor-pointer" title="Highlight Color">
                                 <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded leading-tight">bg</span>
                               </button>
-                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-3 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 hidden group-hover:grid grid-cols-4 gap-1.5 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-2 rounded-lg shadow-xl z-10">
                                 {PRESET_COLORS.map(c => (
-                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('hiliteColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer" style={{ backgroundColor: c.value }} title={c.name}></button>
+                                  <button key={c.name} onMouseDown={(e) => { e.preventDefault(); handleFormat('hiliteColor', c.value); }} className="w-5 h-5 rounded border border-gray-300 dark:border-neutral-600 hover:scale-110 transition-transform cursor-pointer relative overflow-hidden" style={{ backgroundColor: c.value === 'transparent' ? '#f1f5f9' : c.value }} title={c.name}>
+                                    {c.value === 'transparent' && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-black text-[10px] leading-none">/</div>}
+                                  </button>
                                 ))}
                               </div>
                             </div>
