@@ -195,14 +195,13 @@ function generateTemplate(crmData, studentName = 'Student', isPursuing = false, 
   const coursesHtml = matchedCourses.map((c, i) => `
     <tr style="text-align: center; border-bottom: 1px solid #ccc;">
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${i + 1}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: left; color: #111;">${c.universityName || c.university || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center; color: #111;">${c.universityName || c.university || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.duration || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: left; color: #0056b3;">${c.programName || c.name || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center; color: #0056b3;">${c.programName || c.name || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${c.percentage || c.score || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.languageRequirement || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.otherReq || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; font-weight: bold; text-align: center;">${c.admissionTest || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.applicationFees || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 10px 12px; font-size: 14.5px; text-align: center;">${c.tentativeMonths || '-'}</td>
     </tr>
   `).join('');
@@ -264,19 +263,18 @@ function generateTemplate(crmData, studentName = 'Student', isPursuing = false, 
           <thead>
             <tr style="background-color: #FCE4D6; color: #111;">
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center; width: 55px;">S.No</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: left;">University Name</th>
+              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">University Name</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center; width: 90px;">Duration</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: left;">Program Name</th>
+              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Program Name</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Percentage</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Lang. Req.</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Other Req.</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Admission Test/Interview</th>
-              <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Application Fees</th>
               <th style="border: 1px solid #ccc; padding: 12px 10px; font-size: 15px; font-weight: bold; text-align: center;">Tentative Months (Only Opening)</th>
             </tr>
             <!-- Blue Table Remarks Container Header (Per Agency Screenshots) -->
             <tr>
-              <td colspan="10" style="background-color: #dbeafe; padding: 16px 22px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.75; font-size: 15px;">
+              <td colspan="9" style="background-color: #dbeafe; padding: 16px 22px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.75; font-size: 15px;">
                 <div style="font-weight: bold; font-size: 16.5px; margin-bottom: 8px; color: #1d4ed8;">${replacePlaceholders(tableRemarks.headerText)}</div>
                 <div style="font-weight: 600; margin: 3px 0;">${replacePlaceholders(tableRemarks.point1)}</div>
                 <div style="font-weight: 600; margin: 3px 0;">${replacePlaceholders(tableRemarks.point2)}</div>

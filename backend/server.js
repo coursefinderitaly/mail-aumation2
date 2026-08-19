@@ -857,26 +857,41 @@ app.post('/api/send-email', async (req, res) => {
       }
     });
 
-    // Automatically apply 'Course Option Sended' label in Gmail to the thread / message
+    // Automatically apply AI profile labels in Gmail to the thread / message
     try {
-      const labelId = await getOrCreateGmailLabel(gmail, 'Course Option Sended');
-      if (labelId) {
+      const labelsToApply = Array.isArray(req.body.profileLabels) && req.body.profileLabels.length > 0
+        ? [...req.body.profileLabels]
+        : ['Ai- option sended 2026'];
+
+      if (!labelsToApply.some(l => l.toLowerCase().includes('option sended'))) {
+        labelsToApply.push('Ai- option sended 2026');
+      }
+
+      const labelIdsToAdd = [];
+      for (const lName of labelsToApply) {
+        const lid = await getOrCreateGmailLabel(gmail, lName);
+        if (lid && !labelIdsToAdd.includes(lid)) {
+          labelIdsToAdd.push(lid);
+        }
+      }
+
+      if (labelIdsToAdd.length > 0) {
         if (threadId) {
           await gmail.users.threads.modify({
             userId: 'me',
             id: threadId,
-            requestBody: { addLabelIds: [labelId], removeLabelIds: ['UNREAD'] }
+            requestBody: { addLabelIds: labelIdsToAdd, removeLabelIds: ['UNREAD'] }
           });
         } else if (emailId) {
           await gmail.users.messages.modify({
             userId: 'me',
             id: emailId,
-            requestBody: { addLabelIds: [labelId], removeLabelIds: ['UNREAD'] }
+            requestBody: { addLabelIds: labelIdsToAdd, removeLabelIds: ['UNREAD'] }
           });
         }
       }
     } catch(err) {
-      console.error('Failed to attach Course Option Sended label on manual send:', err.message);
+      console.error('Failed to attach profile labels on email send:', err.message);
     }
 
     pendingNotifications.push(`Sent reply to ${cleanTo}`);

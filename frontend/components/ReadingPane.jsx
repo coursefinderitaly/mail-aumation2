@@ -315,9 +315,57 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
     setCourseSearch('');
   };
 
-  const handleGeneratePreview = () => {
+  const handleGeneratePreview = async () => {
     if (!crmData || !email) return;
-    const baseHtmlBody = generateTemplate(crmData, emailToName(email.from), isPursuing, isGap);
+
+    let activeCrmData = crmData;
+
+    // If student profile / logic fields were modified in UI, re-run matching to update matchedCourses & filters
+    if (logicChanged && logicForm) {
+      try {
+        const payload = {
+          ...logicForm,
+          isPursuing: isPursuing,
+          isGap: isGap
+        };
+        const res = await fetch(`/api/courses/match`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentData: payload })
+        });
+        const data = await res.json();
+        if (data.matchedCourses) {
+          activeCrmData = {
+            ...crmData,
+            studentData: data.studentData,
+            matchedCourses: data.matchedCourses,
+            appliedFilters: data.appliedFilters || crmData.appliedFilters,
+            aiReasoning: data.aiReasoning || crmData.aiReasoning,
+            profileLabels: data.profileLabels || crmData.profileLabels,
+            poiNotAvailable: data.poiNotAvailable ?? crmData.poiNotAvailable,
+            isNoCourseOptionsForPoi: data.isNoCourseOptionsForPoi ?? crmData.isNoCourseOptionsForPoi,
+            intakeRemarks: data.intakeRemarks || crmData.intakeRemarks
+          };
+          setCrmData(activeCrmData);
+          setLogicChanged(false);
+        }
+      } catch (err) {
+        console.error('Failed to auto-apply logic on generate preview:', err);
+      }
+    } else if (logicForm) {
+      // Sync latest profile inputs (e.g. intakePitched, scores) into studentData
+      activeCrmData = {
+        ...crmData,
+        studentData: {
+          ...(crmData.studentData || {}),
+          ...logicForm,
+          isPursuing,
+          isGap
+        }
+      };
+    }
+
+    const baseHtmlBody = generateTemplate(activeCrmData, emailToName(email.from), isPursuing, isGap);
     
     // Append the original email as a quote block below our reply
     const quoteHtml = `<br><br><div class="gmail_quote" dir="auto">On ${new Date(email.date).toLocaleString()}, ${email.from} wrote:<br><blockquote class="gmail_quote" style="margin:0px 0px 0px 0.8ex;border-left-width:1px;border-left-style:solid;border-left-color:rgb(204,204,204);padding-left:1ex">${email.body}</blockquote></div>`;
@@ -472,6 +520,29 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                         <span>Not Sended</span>
                       </span>
                     )}
+
+                    {(crmData?.profileLabels || []).map((lbl, idx) => {
+                      const isLow = lbl.toLowerCase().includes('low profile');
+                      if (isLow) {
+                        return (
+                          <span 
+                            key={idx} 
+                            className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border border-red-600"
+                            style={{ backgroundColor: '#000000', color: '#ff0000' }}
+                          >
+                            {lbl}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span 
+                          key={idx} 
+                          className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
+                        >
+                          {lbl}
+                        </span>
+                      );
+                    })}
                   </div>
                   <p className="text-xs dark:text-neutral-500 text-slate-500">{email.from} <span className="mx-2">•</span> {new Date(email.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
                 </div>
@@ -1992,14 +2063,13 @@ function generateTemplate(crmData, studentName, isPursuing = false, isGap = fals
   const coursesHtml = matchedCourses.map((c, i) => `
     <tr style="text-align: center; border-bottom: 1px solid #ccc;">
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${i + 1}</td>
-      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #111;">${c.universityName || c.university || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center; color: #111;">${c.universityName || c.university || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.duration || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #0056b3;">${c.programName || c.name || '-'}</td>
+      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center; color: #0056b3;">${c.programName || c.name || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.percentage || c.score || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.languageRequirement || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.otherReq || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.admissionTest || '-'}</td>
-      <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.applicationFees || '-'}</td>
       <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.tentativeMonths || '-'}</td>
     </tr>
   `).join('');
@@ -2061,19 +2131,18 @@ function generateTemplate(crmData, studentName, isPursuing = false, isGap = fals
           <thead>
             <tr style="background-color: #FCE4D6; color: #111;">
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center; width: 45px;">S.No</th>
-              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">University Name</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">University Name</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center; width: 75px;">Duration</th>
-              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">Program Name</th>
+              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Program Name</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Percentage</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Lang. Req.</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Other Req.</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Admission Test/Interview</th>
-              <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Application Fees</th>
               <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Tentative Months (Only Opening)</th>
             </tr>
             <!-- Blue Table Remarks Container Header (Per Agency Screenshots) -->
             <tr>
-              <td colspan="10" style="background-color: #dbeafe; padding: 10px 14px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.5; font-size: 13px;">
+              <td colspan="9" style="background-color: #dbeafe; padding: 10px 14px; border: 1px solid #93c5fd; text-align: center; color: #1e3a8a; line-height: 1.5; font-size: 13px;">
                 <div style="font-weight: bold; font-size: 14.5px; margin-bottom: 6px; color: #1d4ed8;">REMARKS: Details for ${intake} Intake</div>
                 <div style="font-weight: 600; margin: 2px 0;">1. We will evaluate the profile again before starting the admission application submission</div>
                 <div style="font-weight: 600; margin: 2px 0;">2. Admission will depend on admission test: CEnT-S, SAT (1300/1600), or respective university test</div>

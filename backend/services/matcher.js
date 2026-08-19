@@ -160,14 +160,14 @@ function getInterestProfile(poi, stream, bachelorProgram = '', bachelorDegree = 
   }
 
   // ── Architecture / Urban Planning / Design ──
-  if (combined.match(/\b(architecture|barch|b\.arch|bachelor of architecture|urban planning|urban design|interior design|landscape)\b/i)) {
+  if (combined.match(/\b(architecture|barch|b\.arch|bachelor of architecture|urban planning|urban design|landscape)\b/i)) {
     interests.push({
       label: 'Architecture',
-      programMatch: /architecture|urban planning|interior design|landscape|building design/i,
-      fieldMatch: /architecture|design/i,
-      subMatch: /architecture|urban|design/i,
-      bgMatch: /physics|math|architecture|barch|b\.arch|any background|any field/i,
-      excludeFields: /medical|bio science|law|humanities|computer applications/i
+      programMatch: /architecture|urban planning|landscape|spatial planning|urban regeneration|building design/i,
+      fieldMatch: /architecture|urban|landscape/i,
+      subMatch: /architecture|urban|landscape|heritage|conservation/i,
+      bgMatch: /physics|math|architecture|barch|b\.arch|any background|any field|bachelor/i,
+      excludeFields: /medical|bio science|law|humanities|computer applications|engineering|management|commerce|fashion/i
     });
   }
 
@@ -370,8 +370,9 @@ function scoreCourse(course, studentProfile) {
       }
     }
 
-    // Multidisciplinary Engineering is always considered for PCM students (subject to percentage eligibility filter)
-    if (isStreamPCM && isMultidisciplinary && !isMasterTarget) {
+    // Multidisciplinary Engineering is only considered for PCM students if student doesn't have a specific non-engineering POI (e.g. Architecture)
+    const hasSpecificNonEngInterest = interests.length > 0 && !interests.some(i => i.label === 'Engineering' || i.label === 'CS/AI/ML');
+    if (isStreamPCM && isMultidisciplinary && !isMasterTarget && !hasSpecificNonEngInterest) {
       anyInterestMatched = true;
       bestInterestBonus = Math.max(bestInterestBonus, 90);
     }
@@ -532,15 +533,46 @@ async function matchCourses(studentData, userInstruction = '') {
 
   // ── 4. Generate Profile Labels ──
   const profileLabels = [];
-  const isMBBS = poi.match(/mbbs|medicine/i);
-  const isSept2027 = session.toLowerCase().includes('sept 2027') || session.toLowerCase().includes('sep 2027');
-  if (isSept2027) {
-    if (isMBBS) profileLabels.push('MBBS sep 2027');
-    else if (isMasterTarget) profileLabels.push('masters sep 2027 intake');
-    else profileLabels.push('bachelors sep 2027 intake');
+  
+  // Extract intake year (e.g. 2026, 2027), defaulting to 2026
+  const yearMatch = session.match(/\b(202\d)\b/);
+  const yearStr = yearMatch ? yearMatch[1] : '2026';
+
+  // 1st Label: Degree level ('Ai-Bachelors 2026' / 'Ai-masters 2026')
+  if (isMasterTarget) {
+    profileLabels.push(`Ai-masters ${yearStr}`);
+  } else {
+    profileLabels.push(`Ai-Bachelors ${yearStr}`);
   }
+
+  // 2nd Label: Option sended status ('Ai- option sended 2026')
+  profileLabels.push(`Ai- option sended ${yearStr}`);
+
+  // 3rd Label: Intake month ('Ai-September intake', etc.)
+  const monthMatch = session.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b/i);
+  let monthStr = 'September';
+  if (monthMatch) {
+    const rawM = monthMatch[1].toLowerCase();
+    if (rawM.startsWith('sep')) monthStr = 'September';
+    else if (rawM.startsWith('feb')) monthStr = 'February';
+    else if (rawM.startsWith('jan')) monthStr = 'January';
+    else if (rawM.startsWith('mar')) monthStr = 'March';
+    else if (rawM.startsWith('apr')) monthStr = 'April';
+    else if (rawM.startsWith('may')) monthStr = 'May';
+    else if (rawM.startsWith('jun')) monthStr = 'June';
+    else if (rawM.startsWith('jul')) monthStr = 'July';
+    else if (rawM.startsWith('aug')) monthStr = 'August';
+    else if (rawM.startsWith('oct')) monthStr = 'October';
+    else if (rawM.startsWith('nov')) monthStr = 'November';
+    else if (rawM.startsWith('dec')) monthStr = 'December';
+  }
+  profileLabels.push(`Ai-${monthStr} intake`);
+
+  // 4th Label: Low Profile ('Ai-low profile' for percentage < 65%)
   const effectivePerc = getEffectivePercentage(studentScorePerc);
-  if (effectivePerc > 0 && effectivePerc < 0.65) profileLabels.push('low profile');
+  if (effectivePerc > 0 && effectivePerc < 0.65) {
+    profileLabels.push('Ai-low profile');
+  }
 
   if (!Array.isArray(db.courses) || db.courses.length === 0) {
     return { matchedCourses: [], intakeRemarks, profileLabels };

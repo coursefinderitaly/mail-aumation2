@@ -67,17 +67,26 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
       if (initialData) {
         setTo(initialData.to || '');
         setSubject(initialData.subject || '');
-        setHtmlBody(initialData.htmlBody || '');
-        currentHtmlRef.current = initialData.htmlBody || '';
+        const newHtml = initialData.htmlBody || '';
+        setHtmlBody(newHtml);
+        currentHtmlRef.current = newHtml;
         setBody(initialData.body || '');
         setThreadId(initialData.threadId || null);
         setMessageId(initialData.messageId || '');
         setReferences(initialData.references || '');
-        setIsTemplateMode(Boolean(initialData.htmlBody));
+        setIsTemplateMode(Boolean(newHtml));
+
+        // Force direct DOM innerHTML sync when draft is regenerated or initialData updates
+        if (editableRef.current) {
+          editableRef.current.innerHTML = newHtml;
+        }
       } else {
         setTo(''); setSubject(''); setBody(''); setHtmlBody(''); setThreadId(null); setMessageId(''); setReferences('');
         setIsTemplateMode(false);
         setSelectedCourses([]);
+        if (editableRef.current) {
+          editableRef.current.innerHTML = '';
+        }
       }
       setSendSuccess(false);
       setIsSending(false);
@@ -88,14 +97,13 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
     const coursesHtml = coursesList.map((c, i) => `
       <tr style="text-align: center; border-bottom: 1px solid #ccc;">
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${i + 1}</td>
-        <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #111;">${c.universityName || c.university || 'University Option'}</td>
+        <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center; color: #111;">${c.universityName || c.university || 'University Option'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.duration || '3 Years'}</td>
-        <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: left; color: #0056b3;">${c.programName || c.name || prog || 'B.Sc / B.Tech'}</td>
+        <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center; color: #0056b3;">${c.programName || c.name || prog || 'B.Sc / B.Tech'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.percentage || c.score || '-'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.languageRequirement || 'IELTS 6.0'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.otherReq || '-'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; font-weight: bold; text-align: center;">${c.admissionTest || 'CEnT-S / SAT / Interview'}</td>
-        <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.applicationFees || '-'}</td>
         <td style="border: 1px solid #ccc; padding: 5px 8px; font-size: 12px; text-align: center;">${c.tentativeMonths || '-'}</td>
       </tr>
     `).join('');
@@ -139,19 +147,18 @@ export default function ComposeModal({ isOpen, onClose, initialData }) {
             <thead>
               <tr style="background-color: #FCE4D6; color: #111;">
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">S.No</th>
-                <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">University Name</th>
+                <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">University Name</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Duration</th>
-                <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: left;">Program Name</th>
+                <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Program Name</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Percentage</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Lang. Req.</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Other Req.</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Admission Test/Interview</th>
-                <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Application Fees</th>
                 <th style="border: 1px solid #ccc; padding: 6px 8px; font-size: 12.5px; font-weight: bold; text-align: center;">Tentative Months (Only Opening)</th>
               </tr>
             </thead>
             <tbody>
-              ${coursesHtml || '<tr><td colspan="10" style="padding: 12px; text-align: center; color: #777; font-style: italic;">No courses added yet. Use the dropdown menu in the left panel to add university course options.</td></tr>'}
+              ${coursesHtml || '<tr><td colspan="9" style="padding: 12px; text-align: center; color: #777; font-style: italic;">No courses added yet. Use the dropdown menu in the left panel to add university course options.</td></tr>'}
             </tbody>
           </table>
         </div>
