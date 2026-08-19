@@ -1949,6 +1949,7 @@ function generateTemplate(crmData, studentName, isPursuing = false, isGap = fals
   }
 
   // ── CASE 4: Low Course Options Warning ──
+  const isUndergrad = !isMaster;
   const isLowCourseOptions = isUndergrad && matchedCourses.length > 0 && matchedCourses.length < 3;
   if (isLowCourseOptions) {
     return `
