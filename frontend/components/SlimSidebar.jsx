@@ -7,6 +7,7 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
   const [newLabelName, setNewLabelName] = useState('');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [showAccountsMenu, setShowAccountsMenu] = useState(false);
+  const [apiUsage, setApiUsage] = useState({ emailsAnalyzed: 0, requestsMade: 0 });
 
   const navItems = [
     { id: 'INBOX', label: 'Inbox', icon: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4' },
@@ -27,6 +28,18 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
       .then(r => r.json())
       .then(d => setAutoReplyEnabled(d.enabled))
       .catch(e => console.error(e));
+      
+    const fetchUsage = () => {
+      fetch(`/api/ai/usage`)
+        .then(r => r.json())
+        .then(d => setApiUsage(d))
+        .catch(e => console.error(e));
+    };
+
+    fetchUsage();
+    const usageInterval = setInterval(fetchUsage, 5000);
+
+    return () => clearInterval(usageInterval);
   }, []);
 
   const toggleAutoReply = () => {
@@ -298,6 +311,23 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
           </div>
         </div>
       </div>
+
+      {/* API Usage Stats */}
+      {!isCollapsed && (
+        <div className="shrink-0 mb-3 px-2.5">
+          <p className="text-[9px] font-black dark:text-neutral-500 text-slate-400 uppercase tracking-widest mb-1.5">API Usage Stats</p>
+          <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex flex-col gap-1.5 shadow-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-indigo-800 dark:text-indigo-300">Mails Analyzed</span>
+              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">{apiUsage?.emailsAnalyzed || 0}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-bold text-slate-600 dark:text-neutral-400">Total Requests</span>
+              <span className="text-xs font-bold text-slate-800 dark:text-white">{apiUsage?.requestsMade || 0}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* User Info / Account Switcher Trigger */}
       <div className={`pt-2.5 border-t dark:border-white/10 border-gray-200 mt-2 flex flex-col relative shrink-0 ${isCollapsed ? 'items-center' : 'px-0.5'}`}>

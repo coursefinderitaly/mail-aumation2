@@ -595,6 +595,8 @@ app.post('/api/emails/:id/modify', async (req, res) => {
 });
 
 // 5. API to process an Email via AI (Triggered when clicking an email in GUI)
+app.get('/api/ai/usage', (req, res) => { res.json(db.apiUsage || { emailsAnalyzed: 0, requestsMade: 0 }); });
+
 app.get('/api/courses', (req, res) => {
   res.json(db.courses || []);
 });
@@ -644,6 +646,17 @@ app.post('/api/process-email', async (req, res) => {
     if (nameMatch && nameMatch[1].trim()) fallbackName = nameMatch[1].trim();
 
     const { studentData, isAiUsed, reason } = await parseEmailWithAI(fullText, db.aiConfig || {}, fallbackName, forceEngine);
+    
+    // Track Usage
+    if (!db.apiUsage) db.apiUsage = { emailsAnalyzed: 0, requestsMade: 0 };
+    db.apiUsage.requestsMade += 1;
+    if (isAiUsed) {
+      db.apiUsage.emailsAnalyzed += 1;
+    }
+    const fs = require('fs');
+    const path = require('path');
+    fs.writeFileSync(path.join(__dirname, 'data.json'), JSON.stringify(db, null, 2), 'utf8');
+
     if (!studentData) {
       return res.json({ studentData: null, matchedCourses: [], isAiUsed, reason });
     }
