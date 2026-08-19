@@ -2,7 +2,22 @@ import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import EmailCard from './EmailCard';
 
-export default function EmailList({ emails, selectedEmail, onSelect, onRefresh, isFetching, activeLabel = 'INBOX', onModifyEmail }) {
+export default function EmailList({ 
+  emails, 
+  selectedEmail, 
+  onSelect, 
+  onRefresh, 
+  isFetching, 
+  activeLabel = 'INBOX', 
+  onModifyEmail,
+  pageSize = 25,
+  onChangePageSize,
+  currentPage = 1,
+  hasNextPage = false,
+  hasPrevPage = false,
+  onNextPage,
+  onPrevPage
+}) {
   const listRef = useRef();
   const [filter, setFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
@@ -216,6 +231,48 @@ export default function EmailList({ emails, selectedEmail, onSelect, onRefresh, 
             />
           ))
         )}
+      </div>
+
+      {/* Pagination Controls Footer */}
+      <div className="p-3 px-4 border-t dark:border-white/[0.08] border-gray-200 flex items-center justify-between dark:bg-[#111] bg-white text-xs shrink-0 font-medium select-none">
+        {/* Page Size Selector */}
+        <div className="flex items-center space-x-2">
+          <span className="dark:text-neutral-400 text-slate-500 font-semibold">Per page:</span>
+          <select 
+            value={pageSize}
+            onChange={(e) => onChangePageSize && onChangePageSize(Number(e.target.value))}
+            className="dark:bg-[#1f1f1f] bg-gray-100 dark:text-neutral-200 text-slate-800 border dark:border-white/10 border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer font-bold text-xs"
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+        {/* Current Page Info */}
+        <div className="dark:text-neutral-300 text-slate-700 font-bold text-xs">
+          Page {currentPage} <span className="text-slate-400 dark:text-neutral-500 font-normal">({filteredEmails.length} shown)</span>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center space-x-1.5">
+          <button
+            onClick={onPrevPage}
+            disabled={!hasPrevPage || isFetching}
+            className="px-3 py-1 rounded-lg border dark:border-white/10 border-gray-200 dark:bg-[#1a1a1a] bg-gray-100 dark:text-neutral-200 text-slate-700 hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold flex items-center cursor-pointer active:scale-95"
+            title="Previous Page"
+          >
+            ‹ Prev
+          </button>
+          <button
+            onClick={onNextPage}
+            disabled={!hasNextPage || isFetching}
+            className="px-3 py-1 rounded-lg border dark:border-white/10 border-gray-200 dark:bg-[#1a1a1a] bg-gray-100 dark:text-neutral-200 text-slate-700 hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all font-bold flex items-center cursor-pointer active:scale-95"
+            title="Next Page"
+          >
+            Next ›
+          </button>
+        </div>
       </div>
 
       {/* Confirmation Popup */}

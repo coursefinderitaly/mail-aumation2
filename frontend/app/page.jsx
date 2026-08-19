@@ -166,24 +166,67 @@ export default function Page() {
     window.location.href = `/auth/google`;
   };
 
-  const fetchEmails = async (label = activeLabel, showLoader = true) => {
+  // Pagination State
+  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [pageTokenStack, setPageTokenStack] = useState([]);
+
+  const fetchEmails = async (label = activeLabel, showLoader = true, overridePageSize = pageSize, pToken = null) => {
     if (label === 'AI_MODEL' || label === 'COURSES_EXCEL' || label === 'MAIL_FORMATS') return;
     if (showLoader) setIsFetching(true);
     try {
-      const res = await fetch(`/api/emails?label=${encodeURIComponent(label)}`);
+      let url = `/api/emails?label=${encodeURIComponent(label)}&maxResults=${overridePageSize}`;
+      if (pToken) {
+        url += `&pageToken=${encodeURIComponent(pToken)}`;
+      }
+      const res = await fetch(url);
       const data = await res.json();
+      
+      let fetchedThreads = [];
+      let nextTok = null;
+      
+      if (Array.isArray(data)) {
+        fetchedThreads = data;
+      } else if (data && Array.isArray(data.threads)) {
+        fetchedThreads = data.threads;
+        nextTok = data.nextPageToken || null;
+      }
+      
       if (!data.error) {
-        setEmailCache(prev => ({ ...prev, [label]: data }));
-        // Only update current list if the user hasn't switched away
-        setEmails(current => {
-          return activeLabel === label ? data : current;
-        });
+        setEmails(fetchedThreads);
+        setNextPageToken(nextTok);
       }
     } catch (e) {
       console.error(e);
     } finally {
       if (showLoader) setIsFetching(false);
     }
+  };
+
+  const handleNextPage = () => {
+    if (!nextPageToken) return;
+    setPageTokenStack(prev => [...prev, nextPageToken]);
+    setCurrentPage(prev => prev + 1);
+    fetchEmails(activeLabel, true, pageSize, nextPageToken);
+  };
+
+  const handlePrevPage = () => {
+    if (pageTokenStack.length === 0) return;
+    const newStack = [...pageTokenStack];
+    newStack.pop(); // Pop current page token
+    const prevToken = newStack.length > 0 ? newStack[newStack.length - 1] : null;
+    setPageTokenStack(newStack);
+    setCurrentPage(prev => Math.max(1, prev - 1));
+    fetchEmails(activeLabel, true, pageSize, prevToken);
+  };
+
+  const handleChangePageSize = (newSize) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+    setPageTokenStack([]);
+    setNextPageToken(null);
+    fetchEmails(activeLabel, true, newSize, null);
   };
 
   const handleModifyEmail = async (emailId, addLabelIds = [], removeLabelIds = []) => {
@@ -279,8 +322,12 @@ export default function Page() {
 
   const handleLabelChange = (newLabel) => {
     setActiveLabel(newLabel);
-    setSelectedEmail(null); // Ensure open reading pane closes and returns to the email list view
+    setSelectedEmail(null);
     setCrmData(null);
+    setCurrentPage(1);
+    setPageTokenStack([]);
+    setNextPageToken(null);
+    fetchEmails(newLabel, true, pageSize, null);
   };
 
   const handleAdminLogin = async (e) => {
@@ -451,10 +498,17 @@ export default function Page() {
                   emails={emails} 
                   selectedEmail={selectedEmail} 
                   onSelect={selectEmailAndProcess} 
-                  onRefresh={() => fetchEmails(activeLabel, true)}
+                  onRefresh={() => fetchEmails(activeLabel, true, pageSize, pageTokenStack.length > 0 ? pageTokenStack[pageTokenStack.length - 1] : null)}
                   isFetching={isFetching}
                   activeLabel={activeLabel}
                   onModifyEmail={handleModifyEmail}
+                  pageSize={pageSize}
+                  onChangePageSize={handleChangePageSize}
+                  currentPage={currentPage}
+                  hasNextPage={!!nextPageToken}
+                  hasPrevPage={pageTokenStack.length > 0}
+                  onNextPage={handleNextPage}
+                  onPrevPage={handlePrevPage}
                 />
               </Panel>
             ) : (

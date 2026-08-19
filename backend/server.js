@@ -378,12 +378,19 @@ app.get('/api/emails', async (req, res) => {
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   
   const label = req.query.label || 'INBOX';
+  const requestedMax = parseInt(req.query.maxResults, 10);
+  const maxResults = (!isNaN(requestedMax) && requestedMax >= 5 && requestedMax <= 100) ? requestedMax : 25;
+  const pageToken = req.query.pageToken || null;
   
   const listParams = {
     userId: 'me',
-    maxResults: 25,
+    maxResults: maxResults,
     includeSpamTrash: true
   };
+
+  if (pageToken) {
+    listParams.pageToken = pageToken;
+  }
 
   if (label !== 'ALL' && label !== 'all') {
     const systemLabels = {
@@ -521,7 +528,12 @@ app.get('/api/emails', async (req, res) => {
       const results = await Promise.all(threadPromises);
       threadsData = results.filter(Boolean);
     }
-    res.json(threadsData);
+
+    res.json({
+      threads: threadsData,
+      nextPageToken: response.data.nextPageToken || null,
+      resultSizeEstimate: response.data.resultSizeEstimate || threadsData.length
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
