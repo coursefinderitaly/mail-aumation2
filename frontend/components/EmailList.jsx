@@ -26,6 +26,7 @@ export default function EmailList({
   const [selectedIds, setSelectedIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState([]);
+  const [viewMode, setViewMode] = useState('compact'); // 'compact' (Gmail single line) or 'comfortable' (Card view)
 
   useEffect(() => {
     setSearchQuery(searchQueryProp);
@@ -118,31 +119,64 @@ export default function EmailList({
     <div className="w-full h-full shrink-0 dark:bg-[#0d0d0d]/90 bg-[#fbfaf6] backdrop-blur-lg border-r dark:border-white/[0.05] border-gray-200 flex flex-col z-10">
       
       {/* Header */}
-      <div className="p-6 pb-4 shrink-0">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-5 pb-3 shrink-0 border-b dark:border-white/[0.05] border-gray-200">
+        <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center space-x-3">
-            <h2 className="text-lg font-semibold dark:text-white text-slate-800 capitalize tracking-tight">
+            <h2 className="text-lg font-bold dark:text-white text-slate-900 capitalize tracking-tight">
               {activeLabel.toLowerCase()}
             </h2>
             {selectedIds.length > 0 && (
-              <span className="text-xs font-medium dark:bg-white/10 bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-full">
+              <span className="text-xs font-semibold dark:bg-white/10 bg-indigo-100 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-full">
                 {selectedIds.length} selected
               </span>
             )}
           </div>
-          {selectedIds.length > 0 && (
-            <button 
-              onClick={() => confirmDelete(selectedIds)}
-              className="text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1.5 cursor-pointer"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-              <span>Delete</span>
-            </button>
-          )}
+
+          <div className="flex items-center space-x-2">
+            {selectedIds.length > 0 && (
+              <button 
+                onClick={() => confirmDelete(selectedIds)}
+                className="text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 px-3 py-1 rounded-lg transition-colors flex items-center space-x-1.5 cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                <span>Delete</span>
+              </button>
+            )}
+
+            {/* View Mode Toggle Switch */}
+            <div className="flex items-center bg-gray-200/70 dark:bg-neutral-800 p-0.5 rounded-lg text-xs font-medium border dark:border-white/5 border-gray-300/50">
+              <button
+                type="button"
+                onClick={() => setViewMode('compact')}
+                className={`px-2 py-1 rounded-md transition-all flex items-center space-x-1 cursor-pointer ${
+                  viewMode === 'compact' 
+                    ? 'bg-white dark:bg-[#222] text-indigo-600 dark:text-white shadow-xs font-bold' 
+                    : 'text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200'
+                }`}
+                title="Gmail Single-Line Preview (Compact)"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                <span className="hidden sm:inline">Compact</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('comfortable')}
+                className={`px-2 py-1 rounded-md transition-all flex items-center space-x-1 cursor-pointer ${
+                  viewMode === 'comfortable' 
+                    ? 'bg-white dark:bg-[#222] text-indigo-600 dark:text-white shadow-xs font-bold' 
+                    : 'text-slate-500 dark:text-neutral-400 hover:text-slate-800 dark:hover:text-neutral-200'
+                }`}
+                title="Cards Preview (Comfortable)"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <span className="hidden sm:inline">Comfortable</span>
+              </button>
+            </div>
+          </div>
         </div>
         
-        <div className="flex items-center space-x-3 mb-5">
-          <div className="flex items-center justify-center shrink-0 w-8 h-8">
+        <div className="flex items-center space-x-2.5 mb-3.5">
+          <div className="flex items-center justify-center shrink-0 w-7 h-7">
             <input 
               type="checkbox" 
               checked={filteredEmails.length > 0 && selectedIds.length === filteredEmails.length}
@@ -151,7 +185,7 @@ export default function EmailList({
             />
           </div>
           <div className="relative flex-1">
-            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 dark:text-neutral-500 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 dark:text-neutral-500 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input 
               type="text" 
               placeholder="Search emails (press Enter to search entire mailbox)..." 
@@ -168,7 +202,7 @@ export default function EmailList({
                   onSearch(searchQuery);
                 }
               }}
-              className="w-full dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl pl-10 pr-9 py-2.5 text-sm dark:text-neutral-200 text-slate-900 dark:placeholder-neutral-600 placeholder-slate-400 focus:outline-none dark:focus:border-white/20 focus:border-indigo-400 dark:focus:bg-[#222] focus:bg-white transition-colors"
+              className="w-full dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl pl-9 pr-8 py-2 text-xs dark:text-neutral-200 text-slate-900 dark:placeholder-neutral-600 placeholder-slate-400 focus:outline-none dark:focus:border-white/20 focus:border-indigo-400 dark:focus:bg-[#222] focus:bg-white transition-colors"
             />
             {searchQuery && (
               <button 
@@ -176,7 +210,7 @@ export default function EmailList({
                   setSearchQuery('');
                   if (onSearch) onSearch('');
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold p-1 transition-colors cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold p-1 transition-colors cursor-pointer"
                 title="Clear search"
               >
                 ✕
@@ -185,7 +219,7 @@ export default function EmailList({
           </div>
           <button 
             onClick={onRefresh}
-            className="w-10 h-10 shrink-0 dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl flex items-center justify-center dark:text-neutral-400 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            className="w-9 h-9 shrink-0 dark:bg-[#1a1a1a] bg-gray-100 border dark:border-white/[0.08] border-gray-200 rounded-xl flex items-center justify-center dark:text-neutral-400 text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
             title="Refresh Inbox"
           >
             <svg className={`w-4 h-4 ${isFetching ? 'animate-spin text-indigo-500 dark:text-indigo-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,15 +227,16 @@ export default function EmailList({
             </svg>
           </button>
         </div>
-        <div className="flex space-x-5 text-xs font-semibold tracking-wide border-b dark:border-white/5 border-gray-200 pb-3 overflow-x-auto custom-scrollbar whitespace-nowrap">
+
+        <div className="flex space-x-4 text-xs font-semibold tracking-wide overflow-x-auto custom-scrollbar whitespace-nowrap pt-1">
           <span 
             onClick={() => setFilter('all')}
-            className={`cursor-pointer shrink-0 relative transition-colors py-0.5 ${filter === 'all' ? 'dark:text-white text-indigo-700 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-indigo-600 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`cursor-pointer shrink-0 relative transition-colors pb-1.5 ${filter === 'all' ? 'dark:text-white text-indigo-700 font-bold border-b-2 dark:border-white border-indigo-600' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             All ({emails.length})
           </span>
           <span 
             onClick={() => setFilter('unread')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'unread' ? 'dark:text-white text-indigo-700 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-indigo-600 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'unread' ? 'dark:text-white text-indigo-700 font-bold border-b-2 dark:border-white border-indigo-600' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <span>Unread</span>
             {unreadCount > 0 && (
               <span className="bg-indigo-100 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.2 rounded-full text-[10px] font-bold leading-none">{unreadCount}</span>
@@ -209,7 +244,7 @@ export default function EmailList({
           </span>
           <span 
             onClick={() => setFilter('attachments')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'attachments' ? 'dark:text-white text-purple-600 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-purple-600 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'attachments' ? 'dark:text-white text-purple-600 font-bold border-b-2 dark:border-white border-purple-600' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
             <span>Attachments</span>
             {attachmentsCount > 0 && (
@@ -218,46 +253,56 @@ export default function EmailList({
           </span>
           <span 
             onClick={() => setFilter('ready')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'ready' ? 'dark:text-white text-indigo-400 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-indigo-500 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'ready' ? 'dark:text-white text-indigo-400 font-bold border-b-2 dark:border-white border-indigo-500' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <span>Ready to Send</span>
             <span className="bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none">{readyCount}</span>
           </span>
           <span 
             onClick={() => setFilter('sended')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'sended' ? 'dark:text-white text-emerald-600 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-emerald-500 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'sended' ? 'dark:text-white text-emerald-600 font-bold border-b-2 dark:border-white border-emerald-500' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <span>Sended</span>
             <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none">{sendedCount}</span>
           </span>
           <span 
             onClick={() => setFilter('not_sended')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'not_sended' ? 'dark:text-white text-amber-600 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-amber-500 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'not_sended' ? 'dark:text-white text-amber-600 font-bold border-b-2 dark:border-white border-amber-500' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <span>Not Sended</span>
             <span className="bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none">{notSendedCount}</span>
           </span>
           <span 
             onClick={() => setFilter('not_analysed')}
-            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors py-0.5 ${filter === 'not_analysed' ? 'dark:text-white text-neutral-300 font-bold after:absolute after:-bottom-3 after:left-0 after:w-full after:h-[2px] dark:after:bg-white after:bg-neutral-500 after:rounded-full' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
+            className={`flex items-center space-x-1.5 shrink-0 cursor-pointer relative transition-colors pb-1.5 ${filter === 'not_analysed' ? 'dark:text-white text-neutral-300 font-bold border-b-2 dark:border-white border-neutral-500' : 'dark:text-neutral-500 text-slate-500 hover:text-slate-800 dark:hover:text-neutral-300'}`}>
             <span>Not Analysed</span>
             <span className="bg-gray-200 dark:bg-neutral-800 text-slate-600 dark:text-neutral-400 px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none">{notAnalysedCount}</span>
           </span>
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-3 pb-6 space-y-0.5 custom-scrollbar" ref={listRef}>
+      {/* List Container */}
+      <div className={`flex-1 overflow-y-auto custom-scrollbar ${viewMode === 'compact' ? 'px-0 py-0 divide-y dark:divide-white/[0.03] divide-gray-100' : 'px-3 py-3 space-y-1'}`} ref={listRef}>
         {isFetching && emails.length === 0 ? (
-          <div className="p-4 space-y-3">
-            {[1, 2, 3, 4, 5, 6, 7].map(i => (
-              <div key={i} className="animate-pulse flex space-x-4 items-center p-3 rounded-xl dark:bg-white/[0.02] bg-gray-50 border dark:border-white/5 border-gray-100">
-                <div className="w-9 h-9 rounded-xl dark:bg-white/10 bg-gray-200 shrink-0"></div>
-                <div className="flex-1 space-y-2.5 py-1 min-w-0">
-                  <div className="flex justify-between">
-                    <div className="h-3 dark:bg-white/10 bg-gray-200 rounded w-1/3"></div>
-                    <div className="h-2 dark:bg-white/10 bg-gray-200 rounded w-12"></div>
-                  </div>
-                  <div className="h-2.5 dark:bg-white/10 bg-gray-200 rounded w-3/4"></div>
+          <div className={viewMode === 'compact' ? 'divide-y dark:divide-white/[0.04]' : 'p-4 space-y-3'}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+              viewMode === 'compact' ? (
+                <div key={i} className="animate-pulse flex items-center h-10 px-4 space-x-4 dark:bg-white/[0.01]">
+                  <div className="w-4 h-4 rounded dark:bg-white/10 bg-gray-200 shrink-0"></div>
+                  <div className="w-4 h-4 rounded dark:bg-white/10 bg-gray-200 shrink-0"></div>
+                  <div className="w-40 h-3 dark:bg-white/10 bg-gray-200 rounded shrink-0"></div>
+                  <div className="flex-1 h-3 dark:bg-white/10 bg-gray-200 rounded"></div>
+                  <div className="w-12 h-3 dark:bg-white/10 bg-gray-200 rounded shrink-0"></div>
                 </div>
-              </div>
+              ) : (
+                <div key={i} className="animate-pulse flex space-x-4 items-center p-3 rounded-xl dark:bg-white/[0.02] bg-gray-50 border dark:border-white/5 border-gray-100">
+                  <div className="w-9 h-9 rounded-xl dark:bg-white/10 bg-gray-200 shrink-0"></div>
+                  <div className="flex-1 space-y-2.5 py-1 min-w-0">
+                    <div className="flex justify-between">
+                      <div className="h-3 dark:bg-white/10 bg-gray-200 rounded w-1/3"></div>
+                      <div className="h-2 dark:bg-white/10 bg-gray-200 rounded w-12"></div>
+                    </div>
+                    <div className="h-2.5 dark:bg-white/10 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                </div>
+              )
             ))}
           </div>
         ) : filteredEmails.length === 0 ? (
@@ -275,13 +320,15 @@ export default function EmailList({
               onToggleCheck={() => handleToggleSelect(email.id)}
               onClick={() => onSelect(email)} 
               onDelete={() => confirmDelete([email.id])}
+              onModifyEmail={onModifyEmail}
+              viewMode={viewMode}
             />
           ))
         )}
       </div>
 
       {/* Pagination Controls Footer */}
-      <div className="p-3 px-4 border-t dark:border-white/[0.08] border-gray-200 flex items-center justify-between dark:bg-[#111] bg-white text-xs shrink-0 font-medium select-none">
+      <div className="p-2.5 px-4 border-t dark:border-white/[0.08] border-gray-200 flex items-center justify-between dark:bg-[#111] bg-white text-xs shrink-0 font-medium select-none">
         {/* Page Size Selector */}
         <div className="flex items-center space-x-2">
           <span className="dark:text-neutral-400 text-slate-500 font-semibold">Per page:</span>

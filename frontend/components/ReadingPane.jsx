@@ -764,8 +764,8 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
                 </button>
 
-                <div ref={emailPanelRef} className="h-full overflow-y-scroll overflow-x-auto custom-scrollbar px-10 md:px-14 py-10 w-full relative block">
-                  <div className="min-w-full w-max pb-8" style={{ zoom: zoomLevel }}>
+                <div ref={emailPanelRef} className="h-full overflow-y-auto overflow-x-auto custom-scrollbar px-6 md:px-10 py-10 w-full relative block">
+                  <div className="w-full pb-8" style={{ zoom: zoomLevel }}>
                     
                     {/* Prose style for dark and light modes */}
                     <EmailBodyRenderer 
