@@ -181,6 +181,7 @@ export default function EmailCard({
                   else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab]";
                   else if (u.includes('SEPTEMBER') || u.includes('INTAKE')) bgClass = "bg-[#25a5be] text-white dark:bg-[#165a6b]";
                   else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518]";
+                  else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
                   
                   return (
                     <span key={idx} className={`px-1.5 py-[1px] rounded text-[10px] font-medium whitespace-nowrap border border-transparent ${bgClass}`} title={lbl}>
