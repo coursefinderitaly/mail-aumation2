@@ -70,24 +70,33 @@ export default function EmailCard({
   onClick, 
   onDelete,
   onModifyEmail,
-  viewMode = 'compact'
+  viewMode = 'compact',
+  userLabels = []
 }) {
   const isUnread = email.labelIds?.includes('UNREAD');
   const isStarred = email.labelIds?.includes('STARRED');
   const senderName = emailToName(email.from);
   const snippetText = cleanSnippetText(email.snippet);
   
-  const customLabels = email.labelNames?.filter(l => {
-    const u = l.toUpperCase();
-    const builtInLabels = [
-      'INBOX', 'UNREAD', 'STARRED', 'SENT', 'TRASH', 'SPAM', 'DRAFT', 
-      'IMPORTANT', 'YELLOW_STAR', 'CHAT', 
-      'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 
-      'CATEGORY_UPDATES', 'CATEGORY_FORUMS'
-    ];
-    if (builtInLabels.includes(u)) return false;
-    return true;
-  }) || [];
+  const customLabelsData = [];
+  (email.labelIds || []).forEach((id, index) => {
+    const userLabel = userLabels.find(l => l.id === id);
+    if (userLabel) {
+      customLabelsData.push({ id, name: userLabel.name, color: userLabel.color });
+    } else if (email.labelNames && email.labelNames[index]) {
+      const name = email.labelNames[index];
+      const u = name.toUpperCase();
+      const builtInLabels = [
+        'INBOX', 'UNREAD', 'STARRED', 'SENT', 'TRASH', 'SPAM', 'DRAFT', 
+        'IMPORTANT', 'YELLOW_STAR', 'CHAT', 
+        'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 
+        'CATEGORY_UPDATES', 'CATEGORY_FORUMS'
+      ];
+      if (!builtInLabels.includes(u)) {
+        customLabelsData.push({ id, name, color: null });
+      }
+    }
+  });
 
   const toggleStar = (e) => {
     e.stopPropagation();
@@ -171,11 +180,11 @@ export default function EmailCard({
         <div className="flex-1 min-w-0 flex flex-col justify-center pt-[2px]">
           {/* Row 1: Labels, Subject, Snippet */}
           <div className="flex items-center w-full truncate pr-3">
-            {customLabels.length > 0 && (
+            {customLabelsData.length > 0 && (
               <div className="flex items-center space-x-1.5 shrink-0 mr-1.5">
-                {customLabels.map((lbl, idx) => {
+                {customLabelsData.map((lblObj, idx) => {
                   let bgClass = "bg-gray-200/80 text-gray-700 dark:bg-white/10 dark:text-neutral-300"; // Default
-                  const u = lbl.toUpperCase();
+                  const u = lblObj.name.toUpperCase();
                   if (u.includes('BACHELOR')) bgClass = "bg-[#ebd3d1] text-[#934c48] dark:bg-[#5c312e] dark:text-[#f8ecec]";
                   else if (u.includes('MBBS')) bgClass = "bg-[#f48cb6] text-white dark:bg-[#a64067]";
                   else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab]";
@@ -183,9 +192,15 @@ export default function EmailCard({
                   else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518]";
                   else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
                   
+                  let customStyle = {};
+                  if (lblObj.color) {
+                    customStyle = { backgroundColor: lblObj.color.backgroundColor, color: lblObj.color.textColor };
+                    bgClass = ""; // Override built-in classes if a custom color exists
+                  }
+                  
                   return (
-                    <span key={idx} className={`px-1.5 py-[1px] rounded text-[10px] font-medium whitespace-nowrap border border-transparent ${bgClass}`} title={lbl}>
-                      {lbl}
+                    <span key={idx} className={`px-1.5 py-[1px] rounded text-[10px] font-medium whitespace-nowrap border border-transparent ${bgClass}`} style={customStyle} title={lblObj.name}>
+                      {lblObj.name}
                     </span>
                   );
                 })}
@@ -338,11 +353,11 @@ export default function EmailCard({
           </span>
         </div>
         <div className={`text-xs mb-1 flex items-center space-x-1.5 truncate ${isUnread && !isSelected ? 'font-semibold dark:text-neutral-200 text-slate-800' : 'font-medium dark:text-neutral-300 text-slate-600'}`}>
-          {customLabels.length > 0 && (
+          {customLabelsData.length > 0 && (
             <div className="flex items-center space-x-1 shrink-0">
-              {customLabels.map((lbl, idx) => {
+              {customLabelsData.map((lblObj, idx) => {
                 let bgClass = "bg-gray-200/80 text-gray-700 dark:bg-white/10 dark:text-neutral-300"; // Default
-                const u = lbl.toUpperCase();
+                const u = lblObj.name.toUpperCase();
                 if (u.includes('BACHELOR')) bgClass = "bg-[#ebd3d1] text-[#934c48] dark:bg-[#5c312e] dark:text-[#f8ecec]";
                 else if (u.includes('MBBS')) bgClass = "bg-[#f48cb6] text-white dark:bg-[#a64067]";
                 else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab]";
@@ -350,9 +365,15 @@ export default function EmailCard({
                 else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518]";
                 else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
                 
+                let customStyle = {};
+                if (lblObj.color) {
+                  customStyle = { backgroundColor: lblObj.color.backgroundColor, color: lblObj.color.textColor };
+                  bgClass = ""; // Override built-in classes if a custom color exists
+                }
+                
                 return (
-                  <span key={idx} className={`inline-flex items-center px-1.5 py-[1px] rounded text-[10px] font-medium whitespace-nowrap border border-transparent ${bgClass}`} title={lbl}>
-                    {lbl}
+                  <span key={idx} className={`inline-flex items-center px-1.5 py-[1px] rounded text-[10px] font-medium whitespace-nowrap border border-transparent ${bgClass}`} style={customStyle} title={lblObj.name}>
+                    {lblObj.name}
                   </span>
                 );
               })}

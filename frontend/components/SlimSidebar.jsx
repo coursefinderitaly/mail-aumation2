@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import LabelSettingsDropdown from './LabelSettingsDropdown';
 
-export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, userEmail, accounts = [], onSwitchAccount, onAddAccount, onLogout, onAdminLogout, theme, toggleTheme, isCollapsed, toggleCollapse }) {
-  const [userLabels, setUserLabels] = useState([]);
+export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, userEmail, accounts = [], onSwitchAccount, onAddAccount, onLogout, onAdminLogout, theme, toggleTheme, isCollapsed, toggleCollapse, userLabels = [], onCreateLabel, onUpdateLabel, onDeleteLabel }) {
   const [showCreateLabel, setShowCreateLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
@@ -23,7 +22,6 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
   ];
 
   useEffect(() => {
-    fetchLabels();
     fetch(`/api/settings/auto-reply`)
       .then(r => r.json())
       .then(d => setAutoReplyEnabled(d.enabled))
@@ -40,76 +38,26 @@ export default function SlimSidebar({ onCompose, activeLabel, onChangeLabel, use
     }).catch(e => console.error(e));
   };
 
-  const fetchLabels = async () => {
-    try {
-      const res = await fetch(`/api/labels`);
-      const data = await res.json();
-      if (Array.isArray(data)) setUserLabels(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const handleCreateLabel = async (e) => {
     e.preventDefault();
     if (!newLabelName.trim()) return;
-    try {
-      const res = await fetch(`/api/labels/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newLabelName.trim() })
-      });
-      const data = await res.json();
-      if (data.id) {
+    if (onCreateLabel) {
+      const data = await onCreateLabel(newLabelName);
+      if (data && data.id) {
         setNewLabelName('');
         setShowCreateLabel(false);
-        fetchLabels();
       }
-    } catch (e) {
-      console.error(e);
     }
   };
 
-  const handleUpdateLabel = async (id, updates) => {
-    // Optimistic UI Update
-    const originalLabels = [...userLabels];
-    setUserLabels(userLabels.map(l => l.id === id ? { ...l, ...updates } : l));
-    
-    // Close the settings dropdown immediately if it's just a color or visibility change
-    if (updates.color !== undefined || updates.labelListVisibility || updates.messageListVisibility) {
-      // Keep dropdown open so they can see the change, it updates instantly now!
-      // Actually, if we want it to close we could do setActiveSettingsLabel(null);
-    }
-
-    try {
-      const res = await fetch(`/api/labels/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
-      });
-      const data = await res.json();
-      if (!data.id) {
-        // Revert on failure
-        setUserLabels(originalLabels);
-      }
-    } catch (e) {
-      console.error(e);
-      // Revert on failure
-      setUserLabels(originalLabels);
-    }
+  const handleUpdateLabel = (id, updates) => {
+    if (onUpdateLabel) onUpdateLabel(id, updates);
   };
 
-  const handleDeleteLabel = async (id) => {
-    try {
-      const res = await fetch(`/api/labels/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        setUserLabels(userLabels.filter(l => l.id !== id));
-        setActiveSettingsLabel(null);
-        if (activeLabel === id) onChangeLabel('INBOX');
-      }
-    } catch (e) {
-      console.error(e);
+  const handleDeleteLabel = (id) => {
+    if (onDeleteLabel) {
+      onDeleteLabel(id);
+      setActiveSettingsLabel(null);
     }
   };
 

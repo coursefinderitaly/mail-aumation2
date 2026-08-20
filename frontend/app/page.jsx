@@ -117,6 +117,57 @@ export default function Page() {
     }
   };
 
+  const handleCreateLabel = async (newLabelName) => {
+    try {
+      const res = await fetch(`/api/labels/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newLabelName.trim() })
+      });
+      const data = await res.json();
+      if (data.id) {
+        fetchUserLabels();
+      }
+      return data;
+    } catch (e) {
+      console.error(e);
+      return { error: e.message };
+    }
+  };
+
+  const handleUpdateLabel = async (id, updates) => {
+    const originalLabels = [...userLabels];
+    setUserLabels(userLabels.map(l => l.id === id ? { ...l, ...updates } : l));
+    
+    try {
+      const res = await fetch(`/api/labels/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      const data = await res.json();
+      if (!data.id) {
+        setUserLabels(originalLabels);
+      }
+    } catch (e) {
+      console.error(e);
+      setUserLabels(originalLabels);
+    }
+  };
+
+  const handleDeleteLabel = async (id) => {
+    try {
+      const res = await fetch(`/api/labels/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setUserLabels(userLabels.filter(l => l.id !== id));
+        if (activeLabel === id) handleLabelChange('INBOX');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleLogout = async (targetEmail = userEmail) => {
     try {
       const res = await fetch(`/api/auth/logout?email=${encodeURIComponent(targetEmail)}`);
@@ -487,6 +538,10 @@ export default function Page() {
             isCollapsed={isSidebarCollapsed}
             toggleCollapse={toggleSidebar}
             onAdminLogout={handleAdminLogout}
+            userLabels={userLabels}
+            onCreateLabel={handleCreateLabel}
+            onUpdateLabel={handleUpdateLabel}
+            onDeleteLabel={handleDeleteLabel}
           />
         </div>
 
@@ -538,6 +593,7 @@ export default function Page() {
                   onPrevPage={handlePrevPage}
                   searchQuery={searchQuery}
                   onSearch={handleSearch}
+                  userLabels={userLabels}
                 />
               </Panel>
             ) : (

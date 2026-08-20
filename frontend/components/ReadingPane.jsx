@@ -549,25 +549,54 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                     </span>
                   )}
                   
-                  {(email.labelNames || []).filter(l => !['INBOX', 'UNREAD', 'STARRED', 'SENT', 'TRASH', 'SPAM', 'DRAFT', 'IMPORTANT', 'YELLOW_STAR', 'CHAT', 'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_FORUMS'].includes(l.toUpperCase())).map((lbl, idx) => {
-                    let bgClass = "bg-gray-200/80 text-gray-700 dark:bg-white/10 dark:text-neutral-300"; // Default
-                    const u = lbl.toUpperCase();
-                    if (u.includes('BACHELOR')) bgClass = "bg-[#ebd3d1] text-[#934c48] dark:bg-[#5c312e] dark:text-[#f8ecec] border-transparent";
-                    else if (u.includes('MBBS')) bgClass = "bg-[#f48cb6] text-white dark:bg-[#a64067] border-transparent";
-                    else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab] border-transparent";
-                    else if (u.includes('SEPTEMBER') || u.includes('INTAKE')) bgClass = "bg-[#25a5be] text-white dark:bg-[#165a6b] border-transparent";
-                    else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518] border-transparent";
-                    else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
+                  {(() => {
+                    const customLabelsData = [];
+                    (email.labelIds || []).forEach((id, index) => {
+                      const userLabel = userLabels.find(l => l.id === id);
+                      if (userLabel) {
+                        customLabelsData.push({ id, name: userLabel.name, color: userLabel.color });
+                      } else if (email.labelNames && email.labelNames[index]) {
+                        const name = email.labelNames[index];
+                        const u = name.toUpperCase();
+                        const builtInLabels = [
+                          'INBOX', 'UNREAD', 'STARRED', 'SENT', 'TRASH', 'SPAM', 'DRAFT', 
+                          'IMPORTANT', 'YELLOW_STAR', 'CHAT', 
+                          'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 
+                          'CATEGORY_UPDATES', 'CATEGORY_FORUMS'
+                        ];
+                        if (!builtInLabels.includes(u)) {
+                          customLabelsData.push({ id, name, color: null });
+                        }
+                      }
+                    });
+                    
+                    return customLabelsData.map((lblObj, idx) => {
+                      let bgClass = "bg-gray-200/80 text-gray-700 dark:bg-white/10 dark:text-neutral-300"; // Default
+                      const u = lblObj.name.toUpperCase();
+                      if (u.includes('BACHELOR')) bgClass = "bg-[#ebd3d1] text-[#934c48] dark:bg-[#5c312e] dark:text-[#f8ecec] border-transparent";
+                      else if (u.includes('MBBS')) bgClass = "bg-[#f48cb6] text-white dark:bg-[#a64067] border-transparent";
+                      else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab] border-transparent";
+                      else if (u.includes('SEPTEMBER') || u.includes('INTAKE')) bgClass = "bg-[#25a5be] text-white dark:bg-[#165a6b] border-transparent";
+                      else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518] border-transparent";
+                      else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
 
-                    return (
-                      <span 
-                        key={idx} 
-                        className={`inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-medium whitespace-nowrap border ${bgClass}`}
-                      >
-                        {lbl}
-                      </span>
-                    );
-                  })}
+                      let customStyle = {};
+                      if (lblObj.color) {
+                        customStyle = { backgroundColor: lblObj.color.backgroundColor, color: lblObj.color.textColor };
+                        bgClass = "border-transparent"; // Override built-in classes if a custom color exists
+                      }
+
+                      return (
+                        <span 
+                          key={idx} 
+                          className={`inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-medium whitespace-nowrap border ${bgClass}`}
+                          style={customStyle}
+                        >
+                          {lblObj.name}
+                        </span>
+                      );
+                    });
+                  })()}
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-900 to-indigo-600 flex items-center justify-center text-sm font-bold border border-indigo-400/20 shadow-inner shrink-0 text-white">

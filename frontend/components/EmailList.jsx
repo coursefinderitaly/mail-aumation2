@@ -18,7 +18,8 @@ export default function EmailList({
   onNextPage,
   onPrevPage,
   searchQuery: searchQueryProp = '',
-  onSearch
+  onSearch,
+  userLabels = []
 }) {
   const listRef = useRef();
   const [filter, setFilter] = useState('all');
@@ -318,6 +319,7 @@ export default function EmailList({
               isSelected={selectedEmail?.id === email.id} 
               isChecked={selectedIds.includes(email.id)}
               onToggleCheck={() => handleToggleSelect(email.id)}
+              userLabels={userLabels}
               onClick={() => onSelect(email)} 
               onDelete={() => confirmDelete([email.id])}
               onModifyEmail={onModifyEmail}
