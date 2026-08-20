@@ -38,6 +38,13 @@ export default function Page() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
+  // Pagination & Search State
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [nextPageToken, setNextPageToken] = useState(null);
+  const [pageTokenStack, setPageTokenStack] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     // Verify admin token securely
     fetch(`/api/admin/verify`, { credentials: 'include' })
@@ -92,13 +99,13 @@ export default function Page() {
 
   useEffect(() => {
     let interval;
-    if (isConnected && activeLabel !== 'AI_MODEL' && activeLabel !== 'COURSES_EXCEL' && activeLabel !== 'MAIL_FORMATS') {
+    if (isConnected && activeLabel !== 'AI_MODEL' && activeLabel !== 'COURSES_EXCEL' && activeLabel !== 'MAIL_FORMATS' && currentPage === 1 && !searchQuery) {
       interval = setInterval(() => {
         fetchEmails(activeLabel, false);
       }, 10000); // 10 seconds polling
     }
     return () => clearInterval(interval);
-  }, [isConnected, activeLabel]);
+  }, [isConnected, activeLabel, currentPage, searchQuery]);
 
   const fetchUserLabels = async () => {
     try {
@@ -166,15 +173,18 @@ export default function Page() {
     window.location.href = `/auth/google`;
   };
 
-  // Pagination & Search State
-  const [pageSize, setPageSize] = useState(25);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [nextPageToken, setNextPageToken] = useState(null);
-  const [pageTokenStack, setPageTokenStack] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+
+  const abortControllerRef = useRef(null);
 
   const fetchEmails = async (label = activeLabel, showLoader = true, overridePageSize = pageSize, pToken = null, sQuery = searchQuery) => {
     if (label === 'AI_MODEL' || label === 'COURSES_EXCEL' || label === 'MAIL_FORMATS') return;
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     if (showLoader) setIsFetching(true);
     try {
       let url = `/api/emails?label=${encodeURIComponent(label)}&maxResults=${overridePageSize}`;
@@ -184,7 +194,7 @@ export default function Page() {
       if (sQuery && sQuery.trim()) {
         url += `&search=${encodeURIComponent(sQuery.trim())}`;
       }
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: abortController.signal });
       const data = await res.json();
       
       let fetchedThreads = [];
@@ -202,9 +212,13 @@ export default function Page() {
         setNextPageToken(nextTok);
       }
     } catch (e) {
-      console.error(e);
+      if (e.name !== 'AbortError') {
+        console.error(e);
+      }
     } finally {
-      if (showLoader) setIsFetching(false);
+      if (abortControllerRef.current === abortController) {
+        if (showLoader) setIsFetching(false);
+      }
     }
   };
 
@@ -213,6 +227,7 @@ export default function Page() {
     setCurrentPage(1);
     setPageTokenStack([]);
     setNextPageToken(null);
+    setEmails([]);
     fetchEmails(activeLabel, true, pageSize, null, q);
   };
 
