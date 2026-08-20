@@ -127,6 +127,7 @@ const oauth2Client = getOauth2Client();
 // 1. OAuth Authentication Route (Triggered from Frontend GUI)
 app.get('/auth/google', (req, res) => {
   const client = getOauth2Client(req);
+  console.log('🔑 Initiating OAuth with Redirect URI:', client._redirectUri || client.redirectUri);
   const url = client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'select_account',
@@ -385,8 +386,7 @@ app.get('/api/emails', async (req, res) => {
   
   const listParams = {
     userId: 'me',
-    maxResults: maxResults,
-    includeSpamTrash: true
+    maxResults: maxResults
   };
 
   if (pageToken) {
@@ -394,21 +394,29 @@ app.get('/api/emails', async (req, res) => {
   }
 
   let qParts = [];
+  if (label === 'ALL' || label === 'all' || label === 'SPAM' || label === 'TRASH') {
+    listParams.includeSpamTrash = true;
+  }
+
   if (label !== 'ALL' && label !== 'all') {
-    const systemLabels = {
-      'INBOX': 'in:inbox',
-      'STARRED': 'is:starred',
-      'SNOOZED': 'is:snoozed',
-      'SENT': 'in:sent',
-      'DRAFT': 'is:draft',
-      'SPAM': 'in:spam',
-      'TRASH': 'in:trash',
-      'AUTO_REPLIED': 'label:auto-replied',
-      'NOT_ANALYZED': 'label:not-analyzed'
+    const directLabelMap = {
+      'INBOX': 'INBOX',
+      'STARRED': 'STARRED',
+      'SENT': 'SENT',
+      'DRAFT': 'DRAFT',
+      'SPAM': 'SPAM',
+      'TRASH': 'TRASH',
+      'UNREAD': 'UNREAD'
     };
     
-    if (systemLabels[label]) {
-      qParts.push(systemLabels[label]);
+    if (directLabelMap[label]) {
+      listParams.labelIds = [directLabelMap[label]];
+    } else if (label === 'SNOOZED') {
+      qParts.push('is:snoozed');
+    } else if (label === 'AUTO_REPLIED') {
+      qParts.push('label:auto-replied');
+    } else if (label === 'NOT_ANALYZED') {
+      qParts.push('label:not-analyzed');
     } else {
       listParams.labelIds = [label];
     }
@@ -450,14 +458,28 @@ app.get('/api/emails', async (req, res) => {
         
         const subject = firstHeaders.find(h => h.name === 'Subject')?.value || 'No Subject';
         
-        // Collect all unique senders for the inbox preview
+        // Collect all unique senders for the inbox preview, mimicking Gmail's "FirstName, me" format
         const allFroms = messages.map(m => {
+          if (m.labelIds && m.labelIds.includes('SENT')) return 'me';
           const f = m.payload.headers.find(h => h.name === 'From')?.value || 'Unknown';
           const match = f.match(/^([^<]+)/);
-          return match ? match[1].replace(/"/g, '').trim() : f;
+          let name = match ? match[1].replace(/"/g, '').trim() : f;
+          if (name.includes('@')) name = name.split('@')[0];
+          // Return the full name (name and surname) instead of just the first name
+          return name || 'Unknown';
         });
-        const uniqueFroms = [...new Set(allFroms)];
-        const fromDisplay = uniqueFroms.length > 2 ? `${uniqueFroms[0]}, ... (${messages.length})` : uniqueFroms.join(', ');
+        
+        let uniqueFroms = [];
+        allFroms.forEach(name => {
+          if (!uniqueFroms.includes(name)) uniqueFroms.push(name);
+        });
+
+        let fromDisplay = uniqueFroms.join(', ');
+        if (uniqueFroms.length > 2) {
+          // If there are more than 2 participants, Gmail often shows "First, ..., Last" or just limits it.
+          // We'll show the first sender and the last participant (which is often 'me' if you replied)
+          fromDisplay = `${uniqueFroms[0]} .. ${uniqueFroms[uniqueFroms.length - 1]}`;
+        }
 
         const date = lastHeaders.find(h => h.name === 'Date')?.value;
         const to = lastHeaders.find(h => h.name === 'To')?.value || '';
@@ -479,15 +501,62 @@ app.get('/api/emails', async (req, res) => {
           const mDate = mHeaders.find(h => h.name === 'Date')?.value;
           const mBody = getEmailBody(m.payload) || m.snippet;
           
-          return `<div style="border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: ${index === messages.length - 1 ? '0' : '24px'}; overflow: hidden; font-family: sans-serif; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <div style="background: #f9fafb; padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
-              <strong style="color: #111827;">${mFrom.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong> 
-              <span style="color: #6b7280; font-size: 11px;">${new Date(mDate).toLocaleString()}</span>
-            </div>
-            <div style="padding: 16px; font-size: 14px; background: white; color: #1f2937; line-height: 1.5; overflow-x: auto;">
+          const isLast = index === messages.length - 1;
+          const senderNameOnly = (mFrom.match(/^"([^"]+)"/) || mFrom.match(/^([^<]+)/))?.[1]?.trim() || mFrom;
+          const snippetText = m.snippet ? `<span style="color: #5f6368; font-weight: 400; margin-left: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle;">- ${m.snippet.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';
+
+          const mAttachments = extractAttachments(m.payload);
+          let attachmentsHtml = '';
+          if (mAttachments.length > 0) {
+            attachmentsHtml = `<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+              <div style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4f46e5; margin-bottom: 12px; display: flex; align-items: center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                Attachments (${mAttachments.length})
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                ${mAttachments.map(att => `
+                  <a href="/api/emails/${m.id}/attachments/${att.attachmentId}?filename=${encodeURIComponent(att.filename)}&mimeType=${encodeURIComponent(att.mimeType)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13px; min-width: 200px; max-width: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+                    <div style="display: flex; align-items: center; overflow: hidden; padding-right: 12px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; flex-shrink: 0;">
+                        📎
+                      </div>
+                      <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <div style="font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; font-size: 12px;">${att.filename}</div>
+                        <div style="font-size: 10px; font-weight: 500; color: #64748b; margin-top: 2px; text-transform: uppercase;">${att.size ? (att.size/1024).toFixed(1) + ' KB' : 'File'}</div>
+                      </div>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  </a>
+                `).join('')}
+              </div>
+            </div>`;
+          }
+
+          return `<details class="email-thread-item" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 16px; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.02); background: #ffffff;">
+            <summary style="cursor: pointer; padding: 16px 24px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; user-select: none; list-style: none; border-bottom: 1px solid #f1f3f4; background: #f8fafc;">
+              <div style="display: flex; align-items: center; overflow: hidden; white-space: nowrap; width: 75%;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #0b57d0; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; margin-right: 16px; flex-shrink: 0;">
+                  ${senderNameOnly.charAt(0).toUpperCase()}
+                </div>
+                <div style="display: flex; flex-direction: column; overflow: hidden; justify-content: center;">
+                  <div style="display: flex; align-items: center;">
+                    <strong style="color: #202124; font-size: 15px; font-weight: 600; flex-shrink: 0;">${senderNameOnly}</strong>
+                  </div>
+                  <div style="color: #5f6368; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
+                    ${mFrom.replace(/</g, '&lt;').replace(/>/g, '&gt;')} ${snippetText}
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; color: #5f6368; font-size: 12px; font-weight: 400; flex-shrink: 0;">
+                <span style="margin-right: 16px;">${mDate ? new Date(mDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #5f6368;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              </div>
+            </summary>
+            <div style="padding: 16px 24px 24px 80px; font-size: 14px; color: #222; line-height: 1.5; overflow-x: visible;">
               ${mBody}
+              ${attachmentsHtml}
             </div>
-          </div>`;
+          </details>`;
         }).join('');
         
         let labelIds = [];
