@@ -18,6 +18,30 @@ const sanitizeHtml = (html) => {
   return clean;
 };
 
+const EmailBodyRenderer = React.memo(({ emailId, bodyHtml }) => {
+  useEffect(() => {
+    // Open the last email thread item when an email is first opened
+    if (emailId) {
+      const timer = setTimeout(() => {
+        const threadItems = document.querySelectorAll('.email-thread-item');
+        if (threadItems.length > 0) {
+          threadItems[threadItems.length - 1].setAttribute('open', 'true');
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [emailId]);
+
+  return (
+    <div 
+      className={`prose dark:prose-invert max-w-full leading-relaxed font-sans email-body-content ${bodyHtml ? '' : 'text-slate-800 dark:text-neutral-200'}`} 
+      dangerouslySetInnerHTML={{__html: bodyHtml}} 
+    />
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.emailId === nextProps.emailId && prevProps.bodyHtml === nextProps.bodyHtml;
+});
+
 export default function ReadingPane({ email, crmData, setCrmData, isProcessing, userLabels = [], onSwitchEngine, onModifyEmail, onPreviewDraft, onClose }) {
   const [showLabelMenu, setShowLabelMenu] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -25,6 +49,14 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [coursesViewMode, setCoursesViewMode] = useState('sheet'); // 'sheet' or 'cards'
   const modalTableRef = useRef(null);
+  const emailPanelRef = useRef(null);
+  
+  const scrollEmailLeft = () => {
+    if (emailPanelRef.current) emailPanelRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+  };
+  const scrollEmailRight = () => {
+    if (emailPanelRef.current) emailPanelRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+  };
   const [expandedCourseIdx, setExpandedCourseIdx] = useState(null);
   const [showAddCourse, setShowAddCourse] = useState(false);
   const [allCourses, setAllCourses] = useState([]);
@@ -33,6 +65,7 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
   const [newLabelName, setNewLabelName] = useState('');
   const [isCreatingLabel, setIsCreatingLabel] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [showAiPanel, setShowAiPanel] = useState(true);
   const [modalUniFilter, setModalUniFilter] = useState('ALL');
   const [modalSearch, setModalSearch] = useState('');
   const [modalGroupByUni, setModalGroupByUni] = useState(false);
@@ -67,6 +100,8 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
       setLogicChanged(false);
     }
   }, [crmData?.studentData]);
+
+
 
   const handleLogicFieldChange = (key, val) => {
     setLogicForm(prev => {
@@ -504,8 +539,36 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
               </button>
-              <div>
-                <h1 className="text-2xl font-semibold dark:text-white text-slate-900 mb-4 tracking-tight leading-tight">{email.subject}</h1>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <h1 className="text-2xl font-semibold dark:text-white text-slate-900 tracking-tight leading-tight shrink-0 mr-2">{email.subject}</h1>
+                  
+                  {(email.labelIds?.includes('INBOX') || email.labelNames?.includes('INBOX')) && (
+                    <span className="inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-medium bg-gray-200 text-gray-700 dark:bg-white/10 dark:text-neutral-300 border border-transparent">
+                      Inbox
+                    </span>
+                  )}
+                  
+                  {(email.labelNames || []).filter(l => !['INBOX', 'UNREAD', 'STARRED', 'SENT', 'TRASH', 'SPAM', 'DRAFT', 'IMPORTANT', 'YELLOW_STAR', 'CHAT', 'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_FORUMS'].includes(l.toUpperCase())).map((lbl, idx) => {
+                    let bgClass = "bg-gray-200/80 text-gray-700 dark:bg-white/10 dark:text-neutral-300"; // Default
+                    const u = lbl.toUpperCase();
+                    if (u.includes('BACHELOR')) bgClass = "bg-[#ebd3d1] text-[#934c48] dark:bg-[#5c312e] dark:text-[#f8ecec] border-transparent";
+                    else if (u.includes('MBBS')) bgClass = "bg-[#f48cb6] text-white dark:bg-[#a64067] border-transparent";
+                    else if (u.includes('OPTIONS SENT')) bgClass = "bg-[#c5a1f2] text-white dark:bg-[#724aab] border-transparent";
+                    else if (u.includes('SEPTEMBER') || u.includes('INTAKE')) bgClass = "bg-[#25a5be] text-white dark:bg-[#165a6b] border-transparent";
+                    else if (u.includes('PURSUING')) bgClass = "bg-[#eaad3b] text-white dark:bg-[#8e6518] border-transparent";
+                    else if (u.includes('LOW PROFILE')) bgClass = "bg-black text-red-500 dark:bg-black dark:text-red-500 font-bold border-transparent";
+
+                    return (
+                      <span 
+                        key={idx} 
+                        className={`inline-flex items-center px-1.5 py-[2px] rounded text-[10px] font-medium whitespace-nowrap border ${bgClass}`}
+                      >
+                        {lbl}
+                      </span>
+                    );
+                  })}
+                </div>
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-900 to-indigo-600 flex items-center justify-center text-sm font-bold border border-indigo-400/20 shadow-inner shrink-0 text-white">
                   {emailToName(email.from).charAt(0).toUpperCase()}
@@ -528,29 +591,6 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                         <span>Not Sended</span>
                       </span>
                     )}
-
-                    {(crmData?.profileLabels || []).map((lbl, idx) => {
-                      const isLow = lbl.toLowerCase().includes('low profile');
-                      if (isLow) {
-                        return (
-                          <span 
-                            key={idx} 
-                            className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border border-red-600"
-                            style={{ backgroundColor: '#000000', color: '#ff0000' }}
-                          >
-                            {lbl}
-                          </span>
-                        );
-                      }
-                      return (
-                        <span 
-                          key={idx} 
-                          className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30"
-                        >
-                          {lbl}
-                        </span>
-                      );
-                    })}
                   </div>
                   <p className="text-xs dark:text-neutral-500 text-slate-500">{email.from} <span className="mx-2">•</span> {new Date(email.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
                 </div>
@@ -564,16 +604,23 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
               <button 
                 onClick={() => setZoomLevel(prev => Math.min(prev + 0.1, 2.5))}
                 title="Zoom In"
-                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all border cursor-pointer dark:text-neutral-400 text-slate-400 dark:hover:text-white hover:text-slate-700 dark:hover:bg-white/10 hover:bg-gray-100 border-transparent dark:hover:border-white/10 hover:border-gray-200"
+                className="px-3 h-9 rounded-xl flex items-center justify-center transition-all border cursor-pointer dark:text-neutral-300 text-slate-600 dark:hover:text-white hover:text-slate-900 dark:hover:bg-white/10 hover:bg-gray-100 border-transparent dark:hover:border-white/10 hover:border-gray-200 text-xs font-bold"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                Size +
               </button>
               <button 
                 onClick={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))}
                 title="Zoom Out"
-                className="w-9 h-9 rounded-xl flex items-center justify-center transition-all border cursor-pointer dark:text-neutral-400 text-slate-400 dark:hover:text-white hover:text-slate-700 dark:hover:bg-white/10 hover:bg-gray-100 border-transparent dark:hover:border-white/10 hover:border-gray-200"
+                className="px-3 h-9 rounded-xl flex items-center justify-center transition-all border cursor-pointer dark:text-neutral-300 text-slate-600 dark:hover:text-white hover:text-slate-900 dark:hover:bg-white/10 hover:bg-gray-100 border-transparent dark:hover:border-white/10 hover:border-gray-200 text-xs font-bold"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7" /></svg>
+                Size -
+              </button>
+              <button 
+                onClick={() => setShowAiPanel(prev => !prev)}
+                title={showAiPanel ? "Hide AI Analysis" : "Show AI Analysis"}
+                className={`px-3 h-9 rounded-xl flex items-center justify-center transition-all border cursor-pointer text-xs font-bold ${!showAiPanel ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30' : 'dark:text-neutral-300 text-slate-600 dark:hover:text-white hover:text-slate-900 dark:hover:bg-white/10 hover:bg-gray-100 border-transparent dark:hover:border-white/10 hover:border-gray-200'}`}
+              >
+                {showAiPanel ? "Hide AI" : "Show AI"}
               </button>
               
               <div className="w-px h-6 bg-gray-200 dark:bg-white/10 mx-1"></div>
@@ -701,61 +748,37 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
           {/* Email Content & CRM Split */}
           <div className="flex-1 flex overflow-hidden">
             <PanelGroup direction="horizontal" className="w-full h-full flex-1">
-              <Panel defaultSize={65} minSize={40}>
-                <div className="h-full overflow-y-auto px-10 md:px-14 py-10 w-full flex flex-col justify-between">
-                  <div>
-                    {/* Attachments Display Section */}
-                    {email.attachments && email.attachments.length > 0 && (
-                      <div className="mb-8 p-6 rounded-2xl dark:bg-[#141414] bg-indigo-50/50 border dark:border-white/10 border-indigo-100 shadow-sm">
-                        <div className="flex items-center justify-between pb-3.5 mb-4 border-b dark:border-white/10 border-indigo-200/60">
-                          <h4 className="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-                            <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                            <span>Attached Files & Documents ({email.attachments.length})</span>
-                          </h4>
-                          <span className="text-[11px] dark:text-neutral-400 text-slate-500 font-medium italic">Click any file below to open / download</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                          {email.attachments.map((att, idx) => (
-                            <a 
-                              key={idx}
-                              href={`/api/emails/${email.id}/attachments/${att.attachmentId}?filename=${encodeURIComponent(att.filename)}&mimeType=${encodeURIComponent(att.mimeType)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group flex items-center justify-between p-3.5 rounded-xl dark:bg-[#1f1f1f] bg-white border dark:border-white/10 border-gray-200 hover:border-indigo-500 dark:hover:border-indigo-400 transition-all duration-200 shadow-2xs hover:shadow-md cursor-pointer no-underline"
-                            >
-                              <div className="flex items-center space-x-3 min-w-0 pr-2">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 font-extrabold text-sm shadow-inner">
-                                  📎
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                  <span className="text-xs font-bold dark:text-neutral-100 text-slate-800 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" title={att.filename}>
-                                    {att.filename}
-                                  </span>
-                                  <span className="text-[10px] dark:text-neutral-400 text-slate-500 uppercase font-semibold mt-0.5">
-                                    {att.size ? `${(att.size / 1024).toFixed(1)} KB` : 'File'} • {att.mimeType ? att.mimeType.split('/').pop().toUpperCase().slice(0, 8) : 'DOC'}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-neutral-800 text-slate-500 dark:text-neutral-400 group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-600 dark:group-hover:text-white flex items-center justify-center transition-colors shrink-0 shadow-xs">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                              </div>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              <Panel defaultSize={65} minSize={40} className="relative group">
+                <button 
+                  onClick={scrollEmailLeft} 
+                  title="Scroll Left"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-40 w-10 h-10 rounded-full bg-white/90 dark:bg-[#1f1f1f]/90 backdrop-blur border border-gray-200 dark:border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 cursor-pointer"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button 
+                  onClick={scrollEmailRight} 
+                  title="Scroll Right"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-40 w-10 h-10 rounded-full bg-white/90 dark:bg-[#1f1f1f]/90 backdrop-blur border border-gray-200 dark:border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 cursor-pointer"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
+                </button>
+
+                <div ref={emailPanelRef} className="h-full overflow-y-scroll overflow-x-auto custom-scrollbar px-10 md:px-14 py-10 w-full flex flex-col justify-between">
+                  <div className="w-full pb-8" style={{ zoom: zoomLevel }}>
                     
                     {/* Prose style for dark and light modes */}
-                    <div 
-                      style={{ zoom: zoomLevel }}
-                      className={`prose dark:prose-invert max-w-full leading-relaxed font-sans email-body-content ${email.body ? '' : 'text-slate-800 dark:text-neutral-200'}`} 
-                      dangerouslySetInnerHTML={{__html: sanitizeHtml(email.body || email.snippet)}} 
+                    <EmailBodyRenderer 
+                      emailId={email.id}
+                      bodyHtml={sanitizeHtml(email.body || email.snippet)}
                     />
                   </div>
                 </div>
               </Panel>
-              <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-white/10 hover:bg-indigo-500 cursor-col-resize transition-colors z-30 relative" />
-              <Panel defaultSize={35} minSize={25} maxSize={50}>
+              {showAiPanel && (
+                <>
+                  <PanelResizeHandle className="w-1 bg-gray-200 dark:bg-white/10 hover:bg-indigo-500 cursor-col-resize transition-colors z-30 relative" />
+                  <Panel defaultSize={35} minSize={25} maxSize={50}>
                 {/* CRM Right Sidebar */}
                 <div className="h-full border-l dark:border-white/[0.03] border-gray-200/60 dark:bg-[#0a0a0c] bg-[#fafaf9] p-4 lg:p-6 overflow-y-auto custom-scrollbar flex flex-col w-full relative">
                   {/* Subtle background glow */}
@@ -1378,6 +1401,8 @@ export default function ReadingPane({ email, crmData, setCrmData, isProcessing, 
                   )}
                 </div>
               </Panel>
+              </>
+              )}
             </PanelGroup>
           </div>
         </motion.div>
