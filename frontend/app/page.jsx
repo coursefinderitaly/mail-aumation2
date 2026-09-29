@@ -39,11 +39,12 @@ export default function Page() {
   const [loginError, setLoginError] = useState('');
 
   // Pagination & Search State
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPageToken, setNextPageToken] = useState(null);
   const [pageTokenStack, setPageTokenStack] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [rateLimitNotice, setRateLimitNotice] = useState(null);
 
   useEffect(() => {
     // Verify admin token securely
@@ -101,8 +102,9 @@ export default function Page() {
     let interval;
     if (isConnected && activeLabel !== 'AI_MODEL' && activeLabel !== 'COURSES_EXCEL' && activeLabel !== 'MAIL_FORMATS' && currentPage === 1 && !searchQuery) {
       interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         fetchEmails(activeLabel, false);
-      }, 10000); // 10 seconds polling
+      }, 60000); // 60 seconds polling interval to preserve Gmail API quota
     }
     return () => clearInterval(interval);
   }, [isConnected, activeLabel, currentPage, searchQuery]);
@@ -258,9 +260,18 @@ export default function Page() {
         nextTok = data.nextPageToken || null;
       }
       
-      if (!data.error) {
+      if (data.cooldown || (data.error && data.error.includes('rate limit'))) {
+        setRateLimitNotice(data.error || 'Gmail rate limit cooling down. Re-syncing shortly...');
+      } else {
+        setRateLimitNotice(null);
+      }
+
+      if (!data.error || (data.threads && data.threads.length > 0)) {
         setEmails(fetchedThreads);
         setNextPageToken(nextTok);
+        if (label) {
+          setEmailCache(prev => ({ ...prev, [label]: fetchedThreads }));
+        }
       }
     } catch (e) {
       if (e.name !== 'AbortError') {
@@ -576,6 +587,15 @@ export default function Page() {
           <>
             {!selectedEmail ? (
               <Panel>
+                {rateLimitNotice && (
+                  <div className="mb-3 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span>⏳</span>
+                      <span>{rateLimitNotice}</span>
+                    </div>
+                    <button onClick={() => fetchEmails(activeLabel, true)} className="underline hover:opacity-80">Retry</button>
+                  </div>
+                )}
                 <EmailList 
                   emails={emails} 
                   selectedEmail={selectedEmail} 

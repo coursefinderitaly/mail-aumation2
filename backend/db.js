@@ -201,6 +201,10 @@ if (fs.existsSync(dataFile)) {
     const savedData = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
     db.tokens = savedData.tokens ? decryptField(savedData.tokens) : null;
     db.accounts = savedData.accounts ? savedData.accounts.map(acc => ({...acc, tokens: decryptField(acc.tokens)})) : [];
+    db.activeEmail = savedData.activeEmail || (db.accounts && db.accounts.length > 0 ? db.accounts[0].email : null);
+    if (!db.tokens && db.accounts && db.accounts.length > 0) {
+      db.tokens = db.accounts[0].tokens;
+    }
     db.logs = savedData.logs || [];
     db.students = savedData.students || [];
     db.autoReplyEnabled = savedData.autoReplyEnabled || false;
@@ -226,6 +230,7 @@ function saveDb() {
   const dataToSave = {
     tokens: encryptField(db.tokens),
     accounts: db.accounts ? db.accounts.map(acc => ({...acc, tokens: encryptField(acc.tokens)})) : [],
+    activeEmail: db.activeEmail || (db.accounts && db.accounts.length > 0 ? db.accounts[0].email : null),
     logs: db.logs,
     students: db.students,
     autoReplyEnabled: db.autoReplyEnabled || false,

@@ -200,6 +200,11 @@ app.get('/api/auth/status', async (req, res) => {
     }
   }
 
+  if (!db.activeEmail && db.accounts && db.accounts.length > 0) {
+    db.activeEmail = db.accounts[0].email;
+    if (!db.tokens) db.tokens = db.accounts[0].tokens;
+  }
+
   if (db.tokens && db.activeEmail) {
     res.json({ 
       connected: true, 
@@ -372,6 +377,186 @@ function extractAttachments(payload) {
   return attachments;
 }
 
+// --- In-Memory Caching & Rate-Limiting Protection for Gmail API ---
+let gmailCooldownUntil = 0;
+let labelsCache = { data: null, map: null, cachedAt: 0 };
+const threadCache = new Map(); // threadId -> { parsed: Object, historyId: String, cachedAt: Number }
+const listCache = new Map(); // cacheKey -> { threads: Array, nextPageToken: String, resultSizeEstimate: Number, cachedAt: Number }
+const inFlightRequests = new Map(); // cacheKey -> Promise
+
+async function getCachedLabelMap(gmail) {
+  const now = Date.now();
+  if (labelsCache.map && (now - labelsCache.cachedAt < 5 * 60 * 1000)) {
+    return labelsCache.map;
+  }
+  try {
+    const lbls = await gmail.users.labels.list({ userId: 'me' });
+    const map = {};
+    (lbls.data.labels || []).forEach(l => {
+      map[l.id] = l.name;
+    });
+    labelsCache = { data: lbls.data.labels || [], map, cachedAt: now };
+    return map;
+  } catch (e) {
+    if (labelsCache.map) return labelsCache.map;
+    throw e;
+  }
+}
+
+function parseThreadDetails(detailsData, labelMap) {
+  const messages = detailsData.messages;
+  if (!messages || messages.length === 0) return null;
+
+  const firstMsg = messages[0];
+  const lastMsg = messages[messages.length - 1];
+
+  const firstHeaders = firstMsg.payload?.headers || [];
+  const lastHeaders = lastMsg.payload?.headers || [];
+
+  const subject = firstHeaders.find(h => h.name === 'Subject')?.value || 'No Subject';
+
+  const allFroms = messages.map(m => {
+    if (m.labelIds && m.labelIds.includes('SENT')) return 'me';
+    const f = m.payload?.headers?.find(h => h.name === 'From')?.value || 'Unknown';
+    const match = f.match(/^([^<]+)/);
+    let name = match ? match[1].replace(/"/g, '').trim() : f;
+    if (name.includes('@')) name = name.split('@')[0];
+    return name || 'Unknown';
+  });
+
+  let uniqueFroms = [];
+  allFroms.forEach(name => {
+    if (!uniqueFroms.includes(name)) uniqueFroms.push(name);
+  });
+
+  let fromDisplay = uniqueFroms.join(', ');
+  if (uniqueFroms.length > 2) {
+    fromDisplay = `${uniqueFroms[0]} .. ${uniqueFroms[uniqueFroms.length - 1]}`;
+  }
+
+  const date = lastHeaders.find(h => h.name === 'Date')?.value;
+  const to = lastHeaders.find(h => h.name === 'To')?.value || '';
+  const messageId = lastHeaders.find(h => h?.name?.toLowerCase() === 'message-id')?.value || '';
+  const references = lastHeaders.find(h => h?.name?.toLowerCase() === 'references')?.value || '';
+
+  let allAttachments = [];
+  messages.forEach(m => {
+    const extracted = extractAttachments(m.payload);
+    extracted.forEach(att => {
+      att.googleMessageId = m.id;
+    });
+    allAttachments = allAttachments.concat(extracted);
+  });
+
+  const bodyContent = messages.map((m, index) => {
+    const mHeaders = m.payload?.headers || [];
+    const mFrom = mHeaders.find(h => h.name === 'From')?.value || 'Unknown';
+    const mDate = mHeaders.find(h => h.name === 'Date')?.value;
+    const mBody = getEmailBody(m.payload) || m.snippet || '';
+
+    const senderNameOnly = (mFrom.match(/^"([^"]+)"/) || mFrom.match(/^([^<]+)/))?.[1]?.trim() || mFrom;
+    const snippetText = m.snippet ? `<span style="color: #5f6368; font-weight: 400; margin-left: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle;">- ${m.snippet.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';
+
+    const mAttachments = extractAttachments(m.payload);
+    let attachmentsHtml = '';
+    if (mAttachments.length > 0) {
+      attachmentsHtml = `<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+        <div style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4f46e5; margin-bottom: 12px; display: flex; align-items: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+          Attachments (${mAttachments.length})
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          ${mAttachments.map(att => `
+            <a href="/api/emails/${m.id}/attachments/${att.attachmentId}?filename=${encodeURIComponent(att.filename)}&mimeType=${encodeURIComponent(att.mimeType)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13px; min-width: 200px; max-width: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
+              <div style="display: flex; align-items: center; overflow: hidden; padding-right: 12px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; flex-shrink: 0;">
+                  📎
+                </div>
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <div style="font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; font-size: 12px;">${att.filename}</div>
+                  <div style="font-size: 10px; font-weight: 500; color: #64748b; margin-top: 2px; text-transform: uppercase;">${att.size ? (att.size/1024).toFixed(1) + ' KB' : 'File'}</div>
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </a>
+          `).join('')}
+        </div>
+      </div>`;
+    }
+
+    return `<details class="email-thread-item" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 16px; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.02); background: #ffffff;">
+      <summary style="cursor: pointer; padding: 16px 24px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; user-select: none; list-style: none; border-bottom: 1px solid #f1f3f4; background: #f8fafc;">
+        <div style="display: flex; align-items: center; overflow: hidden; white-space: nowrap; width: 75%;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: #0b57d0; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; margin-right: 16px; flex-shrink: 0;">
+            ${senderNameOnly.charAt(0).toUpperCase()}
+          </div>
+          <div style="display: flex; flex-direction: column; overflow: hidden; justify-content: center;">
+            <div style="display: flex; align-items: center;">
+              <strong style="color: #202124; font-size: 15px; font-weight: 600; flex-shrink: 0;">${senderNameOnly}</strong>
+            </div>
+            <div style="color: #5f6368; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
+              ${mFrom.replace(/</g, '&lt;').replace(/>/g, '&gt;')} ${snippetText}
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; color: #5f6368; font-size: 12px; font-weight: 400; flex-shrink: 0;">
+          <span style="margin-right: 16px;">${mDate ? new Date(mDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #5f6368;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+      </summary>
+      <div style="padding: 16px 24px 24px 80px; font-size: 14px; color: #222; line-height: 1.5; overflow-x: visible;">
+        ${mBody}
+        ${attachmentsHtml}
+      </div>
+    </details>`;
+  }).join('');
+
+  let labelIds = [];
+  messages.forEach(m => {
+    if (m.labelIds) {
+      m.labelIds.forEach(id => {
+        if (!labelIds.includes(id)) labelIds.push(id);
+      });
+    }
+  });
+  const labelNames = labelIds.map(id => labelMap[id] || id);
+
+  const isCourseOptionSent = labelNames.some(name => {
+    const n = name.toLowerCase();
+    return n.includes('course option sended') || n.includes('course option sent') || n.includes('auto-replied') || n.includes('auto_replied') || n.includes('auto replied') || n === 'sent';
+  });
+
+  const textToAnalyze = messages.map(m => (getEmailBody(m.payload) || m.snippet || '').toLowerCase()).join(' ');
+  const hasStudentData = textToAnalyze.includes('learner name') || textToAnalyze.includes('program of interest') || textToAnalyze.includes('class 12') || textToAnalyze.includes('bachelor') || textToAnalyze.includes('graduation') || textToAnalyze.includes('bca') || textToAnalyze.includes('btech') || textToAnalyze.includes('b.tech') || textToAnalyze.includes('bsc') || textToAnalyze.includes('b.sc') || textToAnalyze.includes('bcom') || textToAnalyze.includes('bba') || textToAnalyze.includes('barch') || textToAnalyze.includes('b.arch') || textToAnalyze.includes('architecture') || textToAnalyze.includes('intake pitched') || textToAnalyze.includes('age ') || textToAnalyze.includes('work experience') || textToAnalyze.includes('master');
+
+  const isNotAnalysed = !hasStudentData || labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
+  const isReadyToSend = hasStudentData && !isCourseOptionSent && !labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
+
+  return {
+    id: detailsData.id,
+    threadId: detailsData.id,
+    snippet: lastMsg.snippet,
+    body: bodyContent,
+    subject: subject,
+    from: fromDisplay,
+    rawFrom: lastMsg.payload?.headers?.find(h => h.name === 'From')?.value || '',
+    to: to,
+    date: date,
+    labelIds: labelIds,
+    labelNames,
+    attachments: allAttachments,
+    hasAttachments: allAttachments.length > 0,
+    isCourseOptionSent,
+    isReadyToSend,
+    isNotSended: !isCourseOptionSent,
+    isNotAnalysed,
+    messageId,
+    references,
+    messageCount: messages.length,
+    historyId: detailsData.historyId
+  };
+}
+
 // 4. API to Fetch Inbox/Folder Emails for the GUI
 app.get('/api/emails', async (req, res) => {
   if (!db.tokens) return res.status(401).json({ error: 'Not connected to Gmail' });
@@ -385,6 +570,39 @@ app.get('/api/emails', async (req, res) => {
   const pageToken = req.query.pageToken || null;
   const searchParam = req.query.search || req.query.q || '';
   
+  const cacheKey = `${label}_${maxResults}_${pageToken || ''}_${searchParam || ''}`;
+  const now = Date.now();
+
+  // 1. Guard against Google API rate limit cooldown
+  if (now < gmailCooldownUntil) {
+    const remainingSecs = Math.ceil((gmailCooldownUntil - now) / 1000);
+    const cached = listCache.get(cacheKey);
+    if (cached) {
+      return res.json({
+        ...cached,
+        isCached: true,
+        cooldown: true,
+        cooldownSeconds: remainingSecs
+      });
+    }
+    return res.status(429).json({
+      error: `Gmail API rate limit cooling down. Ready in ${remainingSecs}s.`,
+      cooldown: true,
+      retryAfter: remainingSecs,
+      threads: []
+    });
+  }
+
+  // 2. Dedup identical concurrent in-flight requests
+  if (inFlightRequests.has(cacheKey)) {
+    try {
+      const result = await inFlightRequests.get(cacheKey);
+      return res.json(result);
+    } catch (e) {
+      // If the in-flight failed, continue to fresh attempt
+    }
+  }
+
   const listParams = {
     userId: 'me',
     maxResults: maxResults
@@ -430,191 +648,112 @@ app.get('/api/emails', async (req, res) => {
   if (qParts.length > 0) {
     listParams.q = qParts.join(' ');
   }
-  
-  try {
-    const response = await gmail.users.threads.list(listParams);
-    
-    // Fetch all label definitions from Gmail to translate labelIds to names
-    let labelMap = {};
+
+  const execFetch = async () => {
     try {
-      const lbls = await gmail.users.labels.list({ userId: 'me' });
-      (lbls.data.labels || []).forEach(l => {
-        labelMap[l.id] = l.name;
-      });
-    } catch(e) { console.error('Error fetching labels list:', e.message); }
+      const response = await gmail.users.threads.list(listParams);
+      const labelMap = await getCachedLabelMap(gmail);
 
-    let threadsData = [];
-    if (response.data.threads) {
-      const threadPromises = response.data.threads.map(async (threadObj) => {
-        const details = await gmail.users.threads.get({ userId: 'me', id: threadObj.id });
-        const messages = details.data.messages;
+      let threadsData = [];
+      if (response.data.threads && response.data.threads.length > 0) {
+        const threadsToFetch = [];
         
-        if (!messages || messages.length === 0) return null;
-        
-        const firstMsg = messages[0];
-        const lastMsg = messages[messages.length - 1];
-        
-        const firstHeaders = firstMsg.payload.headers;
-        const lastHeaders = lastMsg.payload.headers;
-        
-        const subject = firstHeaders.find(h => h.name === 'Subject')?.value || 'No Subject';
-        
-        // Collect all unique senders for the inbox preview, mimicking Gmail's "FirstName, me" format
-        const allFroms = messages.map(m => {
-          if (m.labelIds && m.labelIds.includes('SENT')) return 'me';
-          const f = m.payload.headers.find(h => h.name === 'From')?.value || 'Unknown';
-          const match = f.match(/^([^<]+)/);
-          let name = match ? match[1].replace(/"/g, '').trim() : f;
-          if (name.includes('@')) name = name.split('@')[0];
-          // Return the full name (name and surname) instead of just the first name
-          return name || 'Unknown';
-        });
-        
-        let uniqueFroms = [];
-        allFroms.forEach(name => {
-          if (!uniqueFroms.includes(name)) uniqueFroms.push(name);
+        response.data.threads.forEach((threadObj, index) => {
+          const cached = threadCache.get(threadObj.id);
+          // Check if cached thread is still valid by historyId or recent snippet
+          if (cached && cached.parsed && (
+            (threadObj.historyId && cached.historyId === threadObj.historyId) ||
+            (now - cached.cachedAt < 10 * 60 * 1000 && cached.parsed.snippet === threadObj.snippet)
+          )) {
+            threadsData[index] = cached.parsed;
+          } else {
+            threadsToFetch.push({ threadObj, index });
+          }
         });
 
-        let fromDisplay = uniqueFroms.join(', ');
-        if (uniqueFroms.length > 2) {
-          // If there are more than 2 participants, Gmail often shows "First, ..., Last" or just limits it.
-          // We'll show the first sender and the last participant (which is often 'me' if you replied)
-          fromDisplay = `${uniqueFroms[0]} .. ${uniqueFroms[uniqueFroms.length - 1]}`;
+        // Fetch uncached threads in controlled batches of 4 with a 60ms delay
+        const BATCH_SIZE = 4;
+        for (let i = 0; i < threadsToFetch.length; i += BATCH_SIZE) {
+          const chunk = threadsToFetch.slice(i, i + BATCH_SIZE);
+          await Promise.all(chunk.map(async ({ threadObj, index }) => {
+            try {
+              const details = await gmail.users.threads.get({ userId: 'me', id: threadObj.id });
+              const parsed = parseThreadDetails(details.data, labelMap);
+              if (parsed) {
+                threadCache.set(threadObj.id, {
+                  parsed,
+                  historyId: details.data.historyId || threadObj.historyId,
+                  cachedAt: Date.now()
+                });
+                threadsData[index] = parsed;
+              }
+            } catch (err) {
+              console.error(`Error fetching thread ${threadObj.id}:`, err.message);
+              const stale = threadCache.get(threadObj.id);
+              if (stale && stale.parsed) {
+                threadsData[index] = stale.parsed;
+              }
+              if (err.message && (err.message.includes('Quota exceeded') || err.message.includes('rateLimitExceeded'))) {
+                gmailCooldownUntil = Date.now() + 65000;
+                throw err;
+              }
+            }
+          }));
+
+          if (i + BATCH_SIZE < threadsToFetch.length) {
+            await new Promise(r => setTimeout(r, 60));
+          }
         }
+      }
 
-        const date = lastHeaders.find(h => h.name === 'Date')?.value;
-        const to = lastHeaders.find(h => h.name === 'To')?.value || '';
-        const messageId = lastHeaders.find(h => h?.name?.toLowerCase() === 'message-id')?.value || '';
-        const references = lastHeaders.find(h => h?.name?.toLowerCase() === 'references')?.value || '';
+      const cleanedThreads = threadsData.filter(Boolean);
+      const resultData = {
+        threads: cleanedThreads,
+        nextPageToken: response.data.nextPageToken || null,
+        resultSizeEstimate: response.data.resultSizeEstimate || cleanedThreads.length
+      };
 
-        let allAttachments = [];
-        messages.forEach(m => {
-          const extracted = extractAttachments(m.payload);
-          extracted.forEach(att => {
-            att.googleMessageId = m.id; // Required for downloading attachment later
-          });
-          allAttachments = allAttachments.concat(extracted);
-        });
-
-        const bodyContent = messages.map((m, index) => {
-          const mHeaders = m.payload.headers;
-          const mFrom = mHeaders.find(h => h.name === 'From')?.value || 'Unknown';
-          const mDate = mHeaders.find(h => h.name === 'Date')?.value;
-          const mBody = getEmailBody(m.payload) || m.snippet;
-          
-          const isLast = index === messages.length - 1;
-          const senderNameOnly = (mFrom.match(/^"([^"]+)"/) || mFrom.match(/^([^<]+)/))?.[1]?.trim() || mFrom;
-          const snippetText = m.snippet ? `<span style="color: #5f6368; font-weight: 400; margin-left: 8px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle;">- ${m.snippet.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>` : '';
-
-          const mAttachments = extractAttachments(m.payload);
-          let attachmentsHtml = '';
-          if (mAttachments.length > 0) {
-            attachmentsHtml = `<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
-              <div style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #4f46e5; margin-bottom: 12px; display: flex; align-items: center;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                Attachments (${mAttachments.length})
-              </div>
-              <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-                ${mAttachments.map(att => `
-                  <a href="/api/emails/${m.id}/attachments/${att.attachmentId}?filename=${encodeURIComponent(att.filename)}&mimeType=${encodeURIComponent(att.mimeType)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13px; min-width: 200px; max-width: 280px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s;">
-                    <div style="display: flex; align-items: center; overflow: hidden; padding-right: 12px;">
-                      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-right: 12px; flex-shrink: 0;">
-                        📎
-                      </div>
-                      <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <div style="font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; font-size: 12px;">${att.filename}</div>
-                        <div style="font-size: 10px; font-weight: 500; color: #64748b; margin-top: 2px; text-transform: uppercase;">${att.size ? (att.size/1024).toFixed(1) + ' KB' : 'File'}</div>
-                      </div>
-                    </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                  </a>
-                `).join('')}
-              </div>
-            </div>`;
-          }
-
-          return `<details class="email-thread-item" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 16px; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 2px 4px rgba(0,0,0,0.02); background: #ffffff;">
-            <summary style="cursor: pointer; padding: 16px 24px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; user-select: none; list-style: none; border-bottom: 1px solid #f1f3f4; background: #f8fafc;">
-              <div style="display: flex; align-items: center; overflow: hidden; white-space: nowrap; width: 75%;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: #0b57d0; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; margin-right: 16px; flex-shrink: 0;">
-                  ${senderNameOnly.charAt(0).toUpperCase()}
-                </div>
-                <div style="display: flex; flex-direction: column; overflow: hidden; justify-content: center;">
-                  <div style="display: flex; align-items: center;">
-                    <strong style="color: #202124; font-size: 15px; font-weight: 600; flex-shrink: 0;">${senderNameOnly}</strong>
-                  </div>
-                  <div style="color: #5f6368; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
-                    ${mFrom.replace(/</g, '&lt;').replace(/>/g, '&gt;')} ${snippetText}
-                  </div>
-                </div>
-              </div>
-              <div style="display: flex; align-items: center; color: #5f6368; font-size: 12px; font-weight: 400; flex-shrink: 0;">
-                <span style="margin-right: 16px;">${mDate ? new Date(mDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''}</span>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #5f6368;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              </div>
-            </summary>
-            <div style="padding: 16px 24px 24px 80px; font-size: 14px; color: #222; line-height: 1.5; overflow-x: visible;">
-              ${mBody}
-              ${attachmentsHtml}
-            </div>
-          </details>`;
-        }).join('');
-        
-        let labelIds = [];
-        messages.forEach(m => {
-          if (m.labelIds) {
-            m.labelIds.forEach(id => {
-              if (!labelIds.includes(id)) labelIds.push(id);
-            });
-          }
-        });
-        const labelNames = labelIds.map(id => labelMap[id] || id);
-        
-        const isCourseOptionSent = labelNames.some(name => {
-          const n = name.toLowerCase();
-          return n.includes('course option sended') || n.includes('course option sent') || n.includes('auto-replied') || n.includes('auto_replied') || n.includes('auto replied') || n === 'sent';
-        });
-
-        const textToAnalyze = messages.map(m => (getEmailBody(m.payload) || m.snippet || '').toLowerCase()).join(' ');
-        const hasStudentData = textToAnalyze.includes('learner name') || textToAnalyze.includes('program of interest') || textToAnalyze.includes('class 12') || textToAnalyze.includes('bachelor') || textToAnalyze.includes('graduation') || textToAnalyze.includes('bca') || textToAnalyze.includes('btech') || textToAnalyze.includes('b.tech') || textToAnalyze.includes('bsc') || textToAnalyze.includes('b.sc') || textToAnalyze.includes('bcom') || textToAnalyze.includes('bba') || textToAnalyze.includes('barch') || textToAnalyze.includes('b.arch') || textToAnalyze.includes('architecture') || textToAnalyze.includes('intake pitched') || textToAnalyze.includes('age ') || textToAnalyze.includes('work experience') || textToAnalyze.includes('master');
-
-        const isNotAnalysed = !hasStudentData || labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
-        const isReadyToSend = hasStudentData && !isCourseOptionSent && !labelNames.some(name => name.toLowerCase().includes('not-analyzed') || name.toLowerCase().includes('not analyzed'));
-
-        return {
-          id: threadObj.id, // Using thread ID instead of message ID!
-          threadId: threadObj.id,
-          snippet: lastMsg.snippet,
-          body: bodyContent,
-          subject: subject,
-          from: fromDisplay,
-          rawFrom: lastMsg.payload.headers.find(h => h.name === 'From')?.value || '', // Store the actual raw From header for replies
-          to: to,
-          date: date,
-          labelIds: labelIds,
-          labelNames,
-          attachments: allAttachments,
-          hasAttachments: allAttachments.length > 0,
-          isCourseOptionSent,
-          isReadyToSend,
-          isNotSended: !isCourseOptionSent,
-          isNotAnalysed,
-          messageId,
-          references,
-          messageCount: messages.length
-        };
-      });
-      
-      const results = await Promise.all(threadPromises);
-      threadsData = results.filter(Boolean);
+      listCache.set(cacheKey, { ...resultData, cachedAt: Date.now() });
+      return resultData;
+    } catch (error) {
+      if (error.message && (error.message.includes('Quota exceeded') || error.message.includes('rateLimitExceeded'))) {
+        gmailCooldownUntil = Date.now() + 65000;
+        console.warn(`[Gmail Rate Limit] Quota exceeded. Cooldown active for 65s.`);
+        const cached = listCache.get(cacheKey);
+        if (cached) {
+          return {
+            ...cached,
+            isCached: true,
+            cooldown: true,
+            cooldownSeconds: 65
+          };
+        }
+        const quotaErr = new Error('Gmail API rate limit cooling down. Ready in 65s.');
+        quotaErr.cooldown = true;
+        quotaErr.retryAfter = 65;
+        throw quotaErr;
+      }
+      throw error;
     }
+  };
 
-    res.json({
-      threads: threadsData,
-      nextPageToken: response.data.nextPageToken || null,
-      resultSizeEstimate: response.data.resultSizeEstimate || threadsData.length
-    });
+  const fetchPromise = execFetch();
+  inFlightRequests.set(cacheKey, fetchPromise);
+
+  try {
+    const data = await fetchPromise;
+    inFlightRequests.delete(cacheKey);
+    res.json(data);
   } catch (error) {
+    inFlightRequests.delete(cacheKey);
+    if (error.cooldown) {
+      return res.status(429).json({
+        error: error.message,
+        cooldown: true,
+        retryAfter: error.retryAfter,
+        threads: []
+      });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -709,10 +848,21 @@ app.get('/api/labels', async (req, res) => {
   oauth2Client.setCredentials(db.tokens);
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   try {
+    const now = Date.now();
+    if (labelsCache.data && (now - labelsCache.cachedAt < 5 * 60 * 1000)) {
+      const userLabels = labelsCache.data.filter(l => l.type && l.type.toLowerCase() === 'user');
+      return res.json(userLabels);
+    }
     const response = await gmail.users.labels.list({ userId: 'me' });
+    const map = {};
+    (response.data.labels || []).forEach(l => { map[l.id] = l.name; });
+    labelsCache = { data: response.data.labels || [], map, cachedAt: now };
     const userLabels = (response.data.labels || []).filter(l => l.type && l.type.toLowerCase() === 'user');
     res.json(userLabels);
   } catch (e) {
+    if (labelsCache.data) {
+      return res.json(labelsCache.data.filter(l => l.type && l.type.toLowerCase() === 'user'));
+    }
     res.status(500).json({ error: e.message });
   }
 });
@@ -728,6 +878,7 @@ app.post('/api/labels/create', async (req, res) => {
       userId: 'me',
       requestBody: { name, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
     });
+    labelsCache = { data: null, map: null, cachedAt: 0 };
     res.json(response.data);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -759,6 +910,7 @@ app.put('/api/labels/:id', async (req, res) => {
       id,
       requestBody
     });
+    labelsCache = { data: null, map: null, cachedAt: 0 };
     res.json(response.data);
   } catch (e) {
     require('fs').appendFileSync('debug_label.log', new Date().toISOString() + ' ' + e.message + '\n');
@@ -774,6 +926,7 @@ app.delete('/api/labels/:id', async (req, res) => {
   const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   try {
     await gmail.users.labels.delete({ userId: 'me', id });
+    labelsCache = { data: null, map: null, cachedAt: 0 };
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -800,6 +953,8 @@ app.post('/api/emails/:id/modify', async (req, res) => {
         requestBody: { addLabelIds, removeLabelIds }
       });
     }
+    threadCache.delete(id);
+    listCache.clear();
     res.json(response.data);
   } catch (e) {
     res.status(500).json({ error: e.message });
